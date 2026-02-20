@@ -42,9 +42,14 @@ async function fetchPlacesFromDB(params: GetPlacesParams) {
         query = query.eq('area_id', areaId)
     }
 
-    // Apply Search Filter
+    // Apply Search Filter (Optimized with Full-Text Search)
     if (search) {
-        query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%,address.ilike.%${search}%`)
+        // Use textSearch if fts_vector column exists (highly recommended as per audit)
+        // Note: 'arabic' config should be set in DB
+        query = query.textSearch('fts_vector', search, {
+            config: 'arabic',
+            type: 'websearch'
+        })
     }
 
     // Apply Sorting

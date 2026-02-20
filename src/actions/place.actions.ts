@@ -6,6 +6,7 @@ import { Place } from "@/domain/entities/place";
 import { createClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 import { createPlaceUseCase } from "@/di/modules"
+import { createPlaceSchema, updatePlaceSchema } from "@/domain/schemas/place.schema";
 
 // Define the state type expected by useActionState
 export type PlaceState = {
@@ -15,7 +16,7 @@ export type PlaceState = {
     data?: Place
 }
 
-export async function createPlaceAction(data: Partial<Place>): Promise<PlaceState> {
+export async function createPlaceAction(rawData: any): Promise<PlaceState> {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -24,25 +25,25 @@ export async function createPlaceAction(data: Partial<Place>): Promise<PlaceStat
             return { message: "يجب تسجيل الدخول أولاً", success: false }
         }
 
-        // Sanitize Data
-        if (data.areaId === '') delete data.areaId
-        if (data.categoryId === '') delete data.categoryId
-
-        // Validate required fields
-        const errors: Record<string, string[]> = {}
-        if (!data.name) errors.name = ["الاسم مطلوب"]
-        if (!data.slug) errors.slug = ["الرابط (Slug) مطلوب"]
-        if (!data.categoryId) errors.categoryId = ["التصنيف مطلوب"]
-
-        if (Object.keys(errors).length > 0) {
-            return { message: "يرجى التأكد من الحقول المطلوبة", errors, success: false }
+        // 1. Validate with Zod
+        const result = createPlaceSchema.safeParse(rawData);
+        if (!result.success) {
+            const errors: Record<string, string[]> = {};
+            result.error.issues.forEach((issue) => {
+                const path = issue.path[0] as string;
+                if (!errors[path]) errors[path] = [];
+                errors[path].push(issue.message);
+            });
+            return { message: "يرجى تصحيح الأخطاء في النموذج", errors, success: false };
         }
 
-        // Create place with 'pending' status for public submissions
+        const validatedData = result.data;
+
+        // 2. Create place with 'pending' status for public submissions
         const place = await createPlaceUseCase.execute({
-            ...data,
+            ...validatedData,
             status: 'pending'
-        }, user.id, supabase)
+        } as any, user.id, supabase)
 
         revalidatePath('/')
         revalidatePath('/places')
@@ -58,7 +59,7 @@ export async function createPlaceAction(data: Partial<Place>): Promise<PlaceStat
     }
 }
 
-export async function updatePlaceAction(id: string, data: Partial<Place>): Promise<PlaceState> {
+export async function updatePlaceAction(id: string, rawData: any): Promise<PlaceState> {
     try {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -67,7 +68,21 @@ export async function updatePlaceAction(id: string, data: Partial<Place>): Promi
             return { message: "يجب تسجيل الدخول أولاً", success: false }
         }
 
-        // Check if user is owner or admin (this check is partly done in repository/supabase RLS too)
+        // 1. Validate with Zod (Partial update)
+        const result = updatePlaceSchema.safeParse(rawData);
+        if (!result.success) {
+            const errors: Record<string, string[]> = {};
+            result.error.issues.forEach((issue) => {
+                const path = issue.path[0] as string;
+                if (!errors[path]) errors[path] = [];
+                errors[path].push(issue.message);
+            });
+            return { message: "يرجى تصحيح الأخطاء في النموذج", errors, success: false };
+        }
+
+        const validatedData = result.data;
+
+        // 2. Check existence
         const placeRepository = new SupabasePlaceRepository(supabase);
         const existingPlace = await placeRepository.getPlaceById(id);
 
@@ -75,11 +90,8 @@ export async function updatePlaceAction(id: string, data: Partial<Place>): Promi
             return { message: "المكان غير موجود", success: false }
         }
 
-        // Sanitize Data
-        if (data.areaId === '') data.areaId = undefined
-        if (data.categoryId === '') data.categoryId = undefined
-
-        const updatedPlace = await placeRepository.updatePlace(id, data);
+        // 3. Update
+        const updatedPlace = await placeRepository.updatePlace(id, validatedData as any);
 
         revalidatePath('/')
         revalidatePath('/places')

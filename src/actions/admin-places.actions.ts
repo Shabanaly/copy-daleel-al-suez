@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 import { PlaceMapper } from "@/data/mappers/place.mapper"
+import { requireAdmin } from "@/lib/supabase/auth-utils"
 
 export async function getAdminPlacesAction(filters?: {
     status?: string
