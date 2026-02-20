@@ -112,10 +112,25 @@ export function Header({ settings }: { settings?: Record<string, unknown> }) {
                         {user ? (
                             <Link
                                 href="/profile"
-                                className="p-2 rounded-full hover:bg-accent transition-colors border border-border/50"
+                                className="flex items-center gap-3 px-3 py-1.5 rounded-full hover:bg-accent transition-all border border-border/40 bg-muted/30"
                                 title="حسابي"
                             >
-                                <User size={20} className="text-muted-foreground" />
+                                <span className="hidden sm:inline-block text-sm font-bold text-foreground max-w-[120px] truncate">
+                                    {user.user_metadata?.full_name || user.email?.split('@')[0]}
+                                </span>
+                                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold overflow-hidden border border-primary/20">
+                                    {user.user_metadata?.avatar_url ? (
+                                        <Image
+                                            src={user.user_metadata.avatar_url}
+                                            alt="User"
+                                            width={32}
+                                            height={32}
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : (
+                                        <User size={18} />
+                                    )}
+                                </div>
                             </Link>
                         ) : (
                             <Link
