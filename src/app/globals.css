@@ -1,0 +1,117 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-noto-kufi), var(--font-inter), sans-serif;
+  
+  /* Brand Colors - Suez Identity */
+  --color-primary: #0066CC; /* Deep Sea Blue */
+  --color-primary-50: #e6f0ff;
+  --color-primary-100: #cce0ff;
+  --color-primary-200: #99c2ff;
+  --color-primary-300: #66a3ff;
+  --color-primary-400: #3385ff;
+  --color-primary-500: #0066cc;
+  --color-primary-600: #0052a3;
+  --color-primary-700: #003d7a;
+  --color-primary-800: #002952;
+  --color-primary-900: #001429;
+  --color-primary-foreground: #ffffff;
+
+  --color-secondary: #F59E0B; /* Golden Sand */
+  --color-secondary-foreground: #ffffff;
+
+  /* Semantic Colors */
+  --color-background: #f8fafc; /* Slate 50 */
+  --color-foreground: #0f172a; /* Slate 900 */
+  
+  --color-muted: #f1f5f9; /* Slate 100 */
+  --color-muted-foreground: #64748b; /* Slate 500 */
+
+  --color-border: #e2e8f0; /* Slate 200 */
+
+  --color-card: #ffffff;
+  --color-card-foreground: #0f172a;
+
+  --color-popover: #ffffff;
+  --color-popover-foreground: #0f172a;
+
+  /* Radius Tokens */
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.5rem;
+  
+  /* Animation */
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+
+  @keyframes accordion-down {
+    from { height: 0 }
+    to { height: var(--radix-accordion-content-height) }
+  }
+  @keyframes accordion-up {
+    from { height: var(--radix-accordion-content-height) }
+    to { height: 0 }
+  }
+}
+
+/*
+  Compatibility for Tailwind v3 default border color behavior
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentColor);
+  }
+
+  /* Dark Mode Overrides */
+  .dark {
+    --color-background: #020617; /* Slate 950 */
+    --color-foreground: #f8fafc; /* Slate 50 */
+    
+    --color-muted: #1e293b; /* Slate 800 */
+    --color-muted-foreground: #94a3b8; /* Slate 400 */
+
+    --color-border: #1e293b; /* Slate 800 */
+    
+    /* Suez Identity Semantic Colors */
+    --color-card: #0B1A2E; /* Deep Navy */
+    --color-card-foreground: #f8fafc;
+    
+    --color-popover: #0B1A2E;
+    --color-popover-foreground: #f8fafc;
+    
+    /* Tint borders with primary in dark mode for that "Suez" feel */
+    --color-border: color-mix(in srgb, var(--color-primary) 20%, #1e293b);
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+  }
+}
+
+/* Custom Utilities */
+@layer utilities {
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #33415580; /* bg-slate-700/50 */
+    border-radius: 9999px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: #475569cc; /* bg-slate-600/80 */
+  }
+}

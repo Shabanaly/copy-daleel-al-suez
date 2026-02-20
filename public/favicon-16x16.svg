@@ -1,0 +1,14 @@
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gradient16" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#4f46e5;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Circular background -->
+  <circle cx="8" cy="8" r="8" fill="url(#gradient16)"/>
+  
+  <!-- Simplified location pin for small size -->
+  <path d="M8 4C6.62 4 5.5 5.12 5.5 6.5C5.5 8.25 8 12 8 12C8 12 10.5 8.25 10.5 6.5C10.5 5.12 9.38 4 8 4ZM8 7.5C7.45 7.5 7 7.05 7 6.5C7 5.95 7.45 5.5 8 5.5C8.55 5.5 9 5.95 9 6.5C9 7.05 8.55 7.5 8 7.5Z" fill="white"/>
+</svg>

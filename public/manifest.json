@@ -1,0 +1,54 @@
+{
+    "name": "دليل السويس",
+    "short_name": "دليل السويس",
+    "description": "دليلك الشامل للأماكن والفعاليات في السويس",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#6366f1",
+    "orientation": "portrait-primary",
+    "dir": "rtl",
+    "lang": "ar",
+    "icons": [
+        {
+            "src": "/icons/icon-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/icons/icon-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ],
+    "categories": [
+        "lifestyle",
+        "travel"
+    ],
+    "shortcuts": [
+        {
+            "name": "الأماكن",
+            "short_name": "Places",
+            "url": "/places",
+            "icons": [
+                {
+                    "src": "/icons/icon-192x192.png",
+                    "sizes": "192x192"
+                }
+            ]
+        },
+        {
+            "name": "الفعاليات",
+            "short_name": "Events",
+            "url": "/events",
+            "icons": [
+                {
+                    "src": "/icons/icon-192x192.png",
+                    "sizes": "192x192"
+                }
+            ]
+        }
+    ]
+}
