@@ -93,12 +93,6 @@ export default function SupabaseImageUpload({
     }
 
     const getDisplayUrl = (url: string) => {
-        if (url.startsWith('blob:')) return url
-
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-        if (supabaseUrl && url.startsWith(supabaseUrl)) {
-            return url.replace(supabaseUrl, '')
-        }
         return url
     }
 

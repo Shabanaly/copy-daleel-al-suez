@@ -11,6 +11,7 @@ import SupabaseImageUpload from '@/presentation/components/ui/supabase-image-upl
 import { uploadImageAction } from '@/app/actions/upload-image-action'
 import { Place } from '@/domain/entities/place'
 import { Area } from '@/domain/entities/area'
+import { createPlaceSchema } from '@/domain/schemas/place.schema'
 
 // Types
 type AddPlaceFormProps = {
@@ -64,6 +65,46 @@ export default function AddPlaceForm({ categories, areas, initialPlace }: AddPla
 
     // --- Actions ---
     const handleSubmit = async (prevState: PlaceState, formData: FormData): Promise<PlaceState> => {
+        const rawData = Object.fromEntries(formData.entries()) as Record<string, unknown>
+
+        // 1. Construct preliminary payload for client-side validation
+        const prePayload = {
+            ...rawData,
+            name: name.trim(),
+            slug: slug.trim(),
+            address: address.trim(),
+            description: description.trim() || undefined,
+            phone: phone.trim(),
+            whatsapp: whatsapp.trim() || undefined,
+            website: website.trim() || undefined,
+            googleMapsUrl: googleMapsUrl.trim() || undefined,
+            socialLinks: Object.fromEntries(
+                Object.entries(socialLinks).filter(([_, v]) => v && v.trim() !== '')
+            ),
+            videoUrl: videoUrl.trim() || undefined,
+            type,
+            opensAt: opensAt || null,
+            closesAt: closesAt || null,
+            areaId: areaId || undefined,
+            categoryId: categoryId || undefined,
+            hasDelivery,
+            deliveryPhone: (hasDelivery && deliveryPhone) ? deliveryPhone.trim() : undefined,
+            talabatUrl: (hasDelivery && talabatUrl) ? talabatUrl.trim() : undefined,
+            glovoUrl: (hasDelivery && glovoUrl) ? glovoUrl.trim() : undefined,
+        }
+
+        // 2. Client-side validation check BEFORE upload
+        const validation = createPlaceSchema.safeParse(prePayload)
+        if (!validation.success) {
+            const errors: Record<string, string[]> = {}
+            validation.error.issues.forEach((issue) => {
+                const path = issue.path[0] as string
+                if (!errors[path]) errors[path] = []
+                errors[path].push(issue.message)
+            })
+            return { message: "يرجى تصحيح الأخطاء في النموذج قبل المتابعة", errors, success: false }
+        }
+
         setIsUploadingImages(true)
         let finalImageUrls = [...images]
 
@@ -86,21 +127,31 @@ export default function AddPlaceForm({ categories, areas, initialPlace }: AddPla
             setIsUploadingImages(false)
         }
 
-        const rawData = Object.fromEntries(formData.entries()) as Record<string, unknown>
-
         const payload: Partial<Place> = {
             ...rawData,
+            name: name.trim(),
+            slug: slug.trim(),
+            address: address.trim(),
+            description: description.trim() || undefined,
+            phone: phone.trim(),
+            whatsapp: whatsapp.trim() || undefined,
+            website: website.trim() || undefined,
+            googleMapsUrl: googleMapsUrl.trim() || undefined,
             images: finalImageUrls,
-            socialLinks,
-            videoUrl,
+            socialLinks: Object.fromEntries(
+                Object.entries(socialLinks).filter(([_, v]) => v && v.trim() !== '')
+            ),
+            videoUrl: videoUrl.trim() || undefined,
             type,
-            opensAt,
-            closesAt,
+            opensAt: opensAt || null,
+            closesAt: closesAt || null,
+            areaId: areaId || undefined,
+            categoryId: categoryId || undefined,
             hasDelivery,
-            deliveryPhone: hasDelivery ? deliveryPhone : undefined,
-            talabatUrl: hasDelivery ? talabatUrl : undefined,
-            glovoUrl: hasDelivery ? glovoUrl : undefined,
-            status: isEditMode ? initialPlace?.status : 'pending' // Force pending for user submissions
+            deliveryPhone: (hasDelivery && deliveryPhone) ? deliveryPhone.trim() : undefined,
+            talabatUrl: (hasDelivery && talabatUrl) ? talabatUrl.trim() : undefined,
+            glovoUrl: (hasDelivery && glovoUrl) ? glovoUrl.trim() : undefined,
+            status: isEditMode ? initialPlace?.status : 'pending'
         }
 
         if (isEditMode && initialPlace) {
@@ -205,6 +256,7 @@ export default function AddPlaceForm({ categories, areas, initialPlace }: AddPla
                                 className="w-full px-4 py-3 bg-background border border-border rounded-xl text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors placeholder:text-muted-foreground/50"
                                 placeholder={type === 'business' ? "مثال: مطعم اسماك السويس" : "مثال: ورشة الأسطى محمد"}
                             />
+                            {state.errors?.name && <p className="text-red-500 text-xs mt-1 font-medium">{state.errors.name[0]}</p>}
                         </div>
 
                         <div>
@@ -239,6 +291,7 @@ export default function AddPlaceForm({ categories, areas, initialPlace }: AddPla
                                         <option key={cat.id} value={cat.id}>{cat.name}</option>
                                     ))}
                                 </select>
+                                {state.errors?.categoryId && <p className="text-red-500 text-xs mt-1 font-medium">{state.errors.categoryId[0]}</p>}
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-muted-foreground mb-2">المنطقة</label>
@@ -253,6 +306,7 @@ export default function AddPlaceForm({ categories, areas, initialPlace }: AddPla
                                         <option key={area.id} value={area.id}>{area.name}</option>
                                     ))}
                                 </select>
+                                {state.errors?.areaId && <p className="text-red-500 text-xs mt-1 font-medium">{state.errors.areaId[0]}</p>}
                             </div>
                         </div>
 
@@ -269,6 +323,7 @@ export default function AddPlaceForm({ categories, areas, initialPlace }: AddPla
                                 className="w-full px-4 py-3 bg-background border border-border rounded-xl text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors placeholder:text-muted-foreground/50"
                                 placeholder="مثال: شارع الجيش، بجوار البنك الأهلي"
                             />
+                            {state.errors?.address && <p className="text-red-500 text-xs mt-1 font-medium">{state.errors.address[0]}</p>}
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
@@ -279,7 +334,7 @@ export default function AddPlaceForm({ categories, areas, initialPlace }: AddPla
                                         <label className="text-xs text-muted-foreground mb-1 block">يفتح</label>
                                         <input
                                             type="time"
-                                            name="opens_at"
+                                            name="opensAt"
                                             value={opensAt}
                                             onChange={(e) => setOpensAt(e.target.value)}
                                             className="w-full px-2 py-3 bg-background border border-border rounded-xl text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors text-center dir-ltr"
@@ -289,13 +344,16 @@ export default function AddPlaceForm({ categories, areas, initialPlace }: AddPla
                                         <label className="text-xs text-muted-foreground mb-1 block">يغلق</label>
                                         <input
                                             type="time"
-                                            name="closes_at"
+                                            name="closesAt"
                                             value={closesAt}
                                             onChange={(e) => setClosesAt(e.target.value)}
                                             className="w-full px-2 py-3 bg-background border border-border rounded-xl text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors text-center dir-ltr"
                                         />
                                     </div>
                                 </div>
+                                {(state.errors?.opensAt || state.errors?.closesAt) && (
+                                    <p className="text-red-500 text-xs mt-1 font-medium">تنسيق الوقت غير صحيح</p>
+                                )}
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-muted-foreground mb-2">رابط خرائط جوجل</label>
@@ -306,10 +364,18 @@ export default function AddPlaceForm({ categories, areas, initialPlace }: AddPla
                                         name="googleMapsUrl"
                                         value={googleMapsUrl}
                                         onChange={(e) => setGoogleMapsUrl(e.target.value)}
-                                        className="w-full pr-10 pl-4 py-3 bg-background border border-border rounded-xl text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors ltr:text-left placeholder:text-muted-foreground/50"
+                                        className="w-full pr-10 pl-24 py-3 bg-background border border-border rounded-xl text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors ltr:text-left placeholder:text-muted-foreground/50"
                                         placeholder="https://maps.app.goo.gl/..."
                                     />
+                                    <button
+                                        type="button"
+                                        onClick={handleSearchOnMap}
+                                        className="absolute left-2 top-2 px-3 py-1.5 bg-accent hover:bg-accent/80 text-accent-foreground rounded-lg text-xs font-medium transition-colors"
+                                    >
+                                        بحث في الخرائط
+                                    </button>
                                 </div>
+                                {state.errors?.googleMapsUrl && <p className="text-red-500 text-xs mt-1 font-medium">{state.errors.googleMapsUrl[0]}</p>}
                             </div>
                         </div>
 
@@ -341,6 +407,7 @@ export default function AddPlaceForm({ categories, areas, initialPlace }: AddPla
                                             className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:ring-1 focus:ring-primary dir-ltr"
                                             placeholder="رقم خاص بالدليفري"
                                         />
+                                        {state.errors?.deliveryPhone && <p className="text-red-500 text-xs mt-1 font-medium">{state.errors.deliveryPhone[0]}</p>}
                                     </div>
                                     <div className="grid grid-cols-2 gap-3">
                                         <div>
@@ -352,6 +419,7 @@ export default function AddPlaceForm({ categories, areas, initialPlace }: AddPla
                                                 className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:ring-1 focus:ring-primary ltr:text-left"
                                                 placeholder="https://talabat.com/..."
                                             />
+                                            {state.errors?.talabatUrl && <p className="text-red-500 text-xs mt-1 font-medium">{state.errors.talabatUrl[0]}</p>}
                                         </div>
                                         <div>
                                             <label className="block text-xs font-medium text-muted-foreground mb-1">رابط جلوفو (Glovo)</label>
@@ -362,6 +430,7 @@ export default function AddPlaceForm({ categories, areas, initialPlace }: AddPla
                                                 className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:ring-1 focus:ring-primary ltr:text-left"
                                                 placeholder="https://glovoapp.com/..."
                                             />
+                                            {state.errors?.glovoUrl && <p className="text-red-500 text-xs mt-1 font-medium">{state.errors.glovoUrl[0]}</p>}
                                         </div>
                                     </div>
                                 </div>
@@ -402,6 +471,7 @@ export default function AddPlaceForm({ categories, areas, initialPlace }: AddPla
                                     className="w-full px-4 py-3 bg-background border border-border rounded-xl text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors dir-ltr placeholder:text-muted-foreground/50"
                                     placeholder="01xxxxxxxxx"
                                 />
+                                {state.errors?.phone && <p className="text-red-500 text-xs mt-1 font-medium">{state.errors.phone[0]}</p>}
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-muted-foreground mb-2">رقم الواتساب</label>
@@ -413,6 +483,7 @@ export default function AddPlaceForm({ categories, areas, initialPlace }: AddPla
                                     className="w-full px-4 py-3 bg-background border border-border rounded-xl text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors dir-ltr placeholder:text-muted-foreground/50"
                                     placeholder="201xxxxxxxxx"
                                 />
+                                {state.errors?.whatsapp && <p className="text-red-500 text-xs mt-1 font-medium">{state.errors.whatsapp[0]}</p>}
                             </div>
                         </div>
 
@@ -457,6 +528,7 @@ export default function AddPlaceForm({ categories, areas, initialPlace }: AddPla
                                         placeholder="https://example.com"
                                     />
                                 </div>
+                                {state.errors?.website && <p className="text-red-500 text-xs mt-1 font-medium">{state.errors.website[0]}</p>}
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-muted-foreground mb-2">رابط فيديو (يوتيوب / تيك توك ...)</label>
@@ -470,8 +542,10 @@ export default function AddPlaceForm({ categories, areas, initialPlace }: AddPla
                                         placeholder="https://www.youtube.com/watch?v=..."
                                     />
                                 </div>
+                                {state.errors?.videoUrl && <p className="text-red-500 text-xs mt-1 font-medium">{state.errors.videoUrl[0]}</p>}
                             </div>
                         </div>
+                        {state.errors?.socialLinks && <p className="text-red-500 text-xs font-medium">يوجد خطأ في روابط التواصل الاجتماعي</p>}
                     </div>
                 </div>
 
@@ -485,6 +559,7 @@ export default function AddPlaceForm({ categories, areas, initialPlace }: AddPla
                         className="w-full px-4 py-3 bg-background border border-border rounded-xl text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors placeholder:text-muted-foreground/50"
                         placeholder="اكتب وصفاً جذاباً للمكان أو الخدمات المقدمة..."
                     />
+                    {state.errors?.description && <p className="text-red-500 text-xs mt-1 font-medium">{state.errors.description[0]}</p>}
                 </div>
 
                 {
