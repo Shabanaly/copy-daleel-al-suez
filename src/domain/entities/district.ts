@@ -1,10 +1,8 @@
-export interface Area {
+export interface District {
     id: string;
     name: string;
     slug: string;
-    districtId?: string; // Optional during transition
-
+    priority: number;
     isActive: boolean;
-
     createdAt: string;
 }

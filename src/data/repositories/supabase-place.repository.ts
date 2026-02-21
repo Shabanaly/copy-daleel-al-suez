@@ -136,8 +136,6 @@ export class SupabasePlaceRepository implements IPlaceRepository {
             address: place.address,
 
             area_id: place.areaId,
-            latitude: place.latitude,
-            longitude: place.longitude,
 
             category_id: place.categoryId,
 
@@ -190,8 +188,6 @@ export class SupabasePlaceRepository implements IPlaceRepository {
         if (place.address) updates.address = place.address;
 
         if (place.areaId) updates.area_id = place.areaId;
-        if (place.latitude !== undefined) updates.latitude = place.latitude;
-        if (place.longitude !== undefined) updates.longitude = place.longitude;
 
         if (place.categoryId) updates.category_id = place.categoryId;
 

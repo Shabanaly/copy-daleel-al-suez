@@ -1,3 +1,5 @@
+'use client';
+
 import { Place } from "@/domain/entities/place";
 import { Category } from "@/domain/entities/category";
 

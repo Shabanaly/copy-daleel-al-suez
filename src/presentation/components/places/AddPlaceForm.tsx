@@ -4,13 +4,16 @@ import { toast } from 'sonner'
 import { useState, useEffect, useActionState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createPlaceAction, updatePlaceAction, PlaceState } from '@/actions/place.actions'
+import { createAreaAction } from '@/actions/area.actions'
 import { translateAndSlugify } from '@/app/actions/translate'
 import { useDebounce } from 'use-debounce'
-import { Loader2, Store, User, MapPin, Globe, Phone, Facebook, Instagram, Youtube, Bike } from 'lucide-react'
+import { Loader2, Store, User, MapPin, Globe, Phone, Facebook, Instagram, Youtube, Bike, Plus, Check } from 'lucide-react'
 import SupabaseImageUpload from '@/presentation/components/ui/supabase-image-upload'
 import { uploadImageAction } from '@/app/actions/upload-image-action'
 import { Place } from '@/domain/entities/place'
 import { Area } from '@/domain/entities/area'
+import { District } from '@/domain/entities/district'
+import { getDistrictsAction } from '@/actions/district.actions'
 import { createPlaceSchema } from '@/domain/schemas/place.schema'
 
 // Types
@@ -45,6 +48,13 @@ export default function AddPlaceForm({ categories, areas, initialPlace }: AddPla
     const [categoryId, setCategoryId] = useState(initialPlace?.categoryId || '')
     const [areaId, setAreaId] = useState(initialPlace?.areaId || '')
 
+    // Quick Area State
+    const [isAddingArea, setIsAddingArea] = useState(false)
+    const [newAreaName, setNewAreaName] = useState('')
+    const [newAreaDistrictId, setNewAreaDistrictId] = useState('')
+    const [districts, setDistricts] = useState<District[]>([])
+    const [isCreatingArea, setIsCreatingArea] = useState(false)
+
     // Delivery State
     const [hasDelivery, setHasDelivery] = useState(initialPlace?.hasDelivery || false)
     const [deliveryPhone, setDeliveryPhone] = useState(initialPlace?.deliveryPhone || '')
@@ -52,7 +62,7 @@ export default function AddPlaceForm({ categories, areas, initialPlace }: AddPla
     const [glovoUrl, setGlovoUrl] = useState(initialPlace?.glovoUrl || '')
 
     // Social Links State
-    const [socialLinks, setSocialLinks] = useState(initialPlace?.socialLinks || {
+    const [socialLinks, setSocialLinks] = useState<Record<string, any>>(initialPlace?.socialLinks || {
         facebook: '',
         instagram: '',
     })
@@ -164,6 +174,14 @@ export default function AddPlaceForm({ categories, areas, initialPlace }: AddPla
 
     // --- Effects ---
     useEffect(() => {
+        const fetchDistricts = async () => {
+            const data = await getDistrictsAction();
+            if (data) setDistricts(data);
+        };
+        fetchDistricts();
+    }, []);
+
+    useEffect(() => {
         if (state.success) {
             toast.success(isEditMode ? 'تم تحديث البيانات بنجاح!' : 'تم إرسال طلبك بنجاح! سيتم مراجعته قريباً.')
             if (!isEditMode) {
@@ -176,25 +194,47 @@ export default function AddPlaceForm({ categories, areas, initialPlace }: AddPla
         }
     }, [state, router, isEditMode])
 
-    // Auto-generate slug
-    useEffect(() => {
-        const generateSlug = async () => {
-            if (debouncedName && !slug) {
-                setIsGeneratingSlug(true)
-                try {
-                    const generated = await translateAndSlugify(debouncedName)
-                    setSlug(generated)
-                } catch (error) {
-                    console.error("Slug generation failed", error)
-                } finally {
-                    setIsGeneratingSlug(false)
-                }
-            }
-        }
-        generateSlug()
-    }, [debouncedName, slug])
+    // Auto-generate coords from Google Maps URL (Removed - system is now District based)
 
     // --- Helper Functions ---
+    const handleAddArea = async () => {
+        if (!newAreaName.trim()) return
+        setIsCreatingArea(true)
+        try {
+            const { translateAndSlugify } = await import('@/app/actions/translate')
+            const slug = await translateAndSlugify(newAreaName)
+
+            if (!newAreaDistrictId) {
+                toast.error('يرجى اختيار الحي التابع له')
+                return
+            }
+
+            const result = await createAreaAction({
+                name: newAreaName.trim(),
+                slug,
+                districtId: newAreaDistrictId,
+                isActive: true
+            })
+
+            if (result.success && result.data) {
+                if (result.isDuplicate) {
+                    toast.info(`المنطقة "${newAreaName}" موجودة بالفعل، تم اختيارها لك.`)
+                } else {
+                    toast.success(`تمت إضافة منطقة "${newAreaName}" بنجاح!`)
+                }
+                setAreaId(result.data.id)
+                setIsAddingArea(false)
+                setNewAreaName('')
+                router.refresh()
+            } else {
+                toast.error(result.error || 'حدث خطأ أثناء إضافة المنطقة')
+            }
+        } catch (error) {
+            toast.error('حدث خطأ غير متوقع')
+        } finally {
+            setIsCreatingArea(false)
+        }
+    }
     const handleSearchOnMap = () => {
         const query = `${name} ${address}`.trim()
         if (!query) {
@@ -294,18 +334,61 @@ export default function AddPlaceForm({ categories, areas, initialPlace }: AddPla
                                 {state.errors?.categoryId && <p className="text-red-500 text-xs mt-1 font-medium">{state.errors.categoryId[0]}</p>}
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-muted-foreground mb-2">المنطقة</label>
-                                <select
-                                    name="areaId"
-                                    value={areaId}
-                                    onChange={(e) => setAreaId(e.target.value)}
-                                    className="w-full px-4 py-3 bg-background border border-border rounded-xl text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors appearance-none cursor-pointer"
-                                >
-                                    <option value="">بدون منطقة</option>
-                                    {areas?.map(area => (
-                                        <option key={area.id} value={area.id}>{area.name}</option>
-                                    ))}
-                                </select>
+                                <label className="block text-sm font-medium text-muted-foreground mb-2 flex items-center justify-between">
+                                    <span>المنطقة</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsAddingArea(!isAddingArea)}
+                                        className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded hover:bg-primary/20 transition-colors flex items-center gap-1"
+                                    >
+                                        <Plus size={10} />
+                                        إضافة منطقة جديدة
+                                    </button>
+                                </label>
+
+                                {isAddingArea ? (
+                                    <div className="flex flex-col gap-2 animate-in fade-in slide-in-from-top-1 bg-primary/5 p-3 rounded-xl border border-primary/20">
+                                        <div className="flex flex-col sm:flex-row gap-2">
+                                            <input
+                                                type="text"
+                                                value={newAreaName}
+                                                onChange={(e) => setNewAreaName(e.target.value)}
+                                                placeholder="اسم المنطقة (مثلاً: شارع النيل)"
+                                                className="flex-[2] min-w-0 px-3 py-2 bg-background border border-primary/30 rounded-xl text-sm outline-none focus:ring-1 focus:ring-primary w-full"
+                                            />
+                                            <select
+                                                value={newAreaDistrictId}
+                                                onChange={(e) => setNewAreaDistrictId(e.target.value)}
+                                                className="flex-1 min-w-0 px-3 py-2 bg-background border border-primary/30 rounded-xl text-sm outline-none focus:ring-1 focus:ring-primary w-full cursor-pointer"
+                                            >
+                                                <option value="">اختر الحي الرئيسي...</option>
+                                                {districts.map(d => (
+                                                    <option key={d.id} value={d.id}>{d.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={handleAddArea}
+                                            disabled={isCreatingArea}
+                                            className="bg-primary text-primary-foreground p-2 rounded-xl hover:brightness-110 active:scale-95 transition-all text-sm font-bold disabled:opacity-50 w-full"
+                                        >
+                                            {isCreatingArea ? <Loader2 size={16} className="animate-spin m-auto" /> : 'حفظ المنطقة الجديدة'}
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <select
+                                        name="areaId"
+                                        value={areaId}
+                                        onChange={(e) => setAreaId(e.target.value)}
+                                        className="w-full px-4 py-3 bg-background border border-border rounded-xl text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors appearance-none cursor-pointer"
+                                    >
+                                        <option value="">بدون منطقة</option>
+                                        {areas?.map(area => (
+                                            <option key={area.id} value={area.id}>{area.name}</option>
+                                        ))}
+                                    </select>
+                                )}
                                 {state.errors?.areaId && <p className="text-red-500 text-xs mt-1 font-medium">{state.errors.areaId[0]}</p>}
                             </div>
                         </div>
@@ -372,7 +455,7 @@ export default function AddPlaceForm({ categories, areas, initialPlace }: AddPla
                                         onClick={handleSearchOnMap}
                                         className="absolute left-2 top-2 px-3 py-1.5 bg-accent hover:bg-accent/80 text-accent-foreground rounded-lg text-xs font-medium transition-colors"
                                     >
-                                        بحث في الخرائط
+                                        بحث
                                     </button>
                                 </div>
                                 {state.errors?.googleMapsUrl && <p className="text-red-500 text-xs mt-1 font-medium">{state.errors.googleMapsUrl[0]}</p>}

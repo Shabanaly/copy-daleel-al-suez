@@ -15,8 +15,6 @@ export class PlaceMapper {
             areaId: row.area_id || undefined,
             areaName: row.area_name || row.areas?.name,
             areaSlug: row.area_slug || undefined,
-            latitude: row.latitude || undefined,
-            longitude: row.longitude || undefined,
 
             // Category
             categoryId: row.category_id || undefined,

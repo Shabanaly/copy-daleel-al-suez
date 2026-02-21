@@ -8,9 +8,15 @@ export class SupabaseMarketplaceRepository {
         const supabase = this.supabase;
         if (!supabase) return { items: [], count: 0 };
 
+        let selectFields = "id, slug, title, price, price_type, category, condition, images, location, area_id, seller_id, status, is_featured, view_count, created_at, expires_at, last_bump_at, profiles:seller_id(full_name, avatar_url, phone)";
+
+        if (filters?.districtId) {
+            selectFields += ", areas!inner(district_id)";
+        }
+
         let dbQuery = supabase
             .from("marketplace_items")
-            .select("id, slug, title, price, price_type, category, condition, images, location, area_id, seller_id, status, is_featured, view_count, created_at, expires_at, last_bump_at, profiles:seller_id(full_name, avatar_url, phone)", { count: 'exact' })
+            .select(selectFields, { count: 'exact' })
             .eq("status", "active")
             .order("is_featured", { ascending: false }) // Featured first
             .order("last_bump_at", { ascending: false }) // Then by last boost
@@ -21,6 +27,9 @@ export class SupabaseMarketplaceRepository {
         }
         if (filters?.areaId) {
             dbQuery = dbQuery.eq("area_id", filters.areaId);
+        }
+        if (filters?.districtId) {
+            dbQuery = dbQuery.eq("areas.district_id", filters.districtId);
         }
         if (filters?.minPrice) {
             dbQuery = dbQuery.gte("price", filters.minPrice);

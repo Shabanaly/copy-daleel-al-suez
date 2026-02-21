@@ -13,6 +13,7 @@ export interface MarketplaceFilters {
     minPrice?: number;
     maxPrice?: number;
     areaId?: string;
+    districtId?: string;
     subType?: string;
     attributes?: Record<string, any>;
 }

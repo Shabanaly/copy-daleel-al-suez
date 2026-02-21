@@ -3,7 +3,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { MarketplaceItem } from '@/domain/entities/marketplace-item'
 import { MARKETPLACE_FORMS } from '@/config/marketplace-forms'
-import { getDistanceFromLatLonInKm } from '@/lib/location-utils'
 import { SupabaseAreaRepository } from '@/data/repositories/supabase-area.repository'
 
 // Fields required for the MarketplaceItemCard and common listing views
@@ -147,37 +146,25 @@ export async function getNearbyItemsOptimized(areaId?: string): Promise<Marketpl
             return results
         }
 
-        // 3. Otherwise, find items in nearest areas
-        // Fetch all active areas to calculate distances
+        // 3. Otherwise, find items in the same district
         const areaRepo = new SupabaseAreaRepository(supabase)
         const allAreas = await areaRepo.getAreas()
         const targetArea = allAreas.find(a => a.id === areaId)
 
-        if (!targetArea || targetArea.latitude === undefined || targetArea.longitude === undefined) return results
+        if (!targetArea || !targetArea.districtId) return results
 
-        // Sort areas by distance to target area
-        const nearestAreas = allAreas
-            .filter(a => a.id !== areaId && a.latitude !== undefined && a.longitude !== undefined)
-            .map(a => ({
-                ...a,
-                distance: getDistanceFromLatLonInKm(
-                    targetArea.latitude!,
-                    targetArea.longitude!,
-                    a.latitude!,
-                    a.longitude!
-                )
-            }))
-            .sort((a, b) => a.distance - b.distance)
+        // Find other areas in the same district
+        const siblingAreaIds = allAreas
+            .filter(a => a.districtId === targetArea.districtId && a.id !== areaId)
+            .map(a => a.id)
 
-        // Fetch items from the nearest areas sequentially or in bulk
-        // Bulk is better. Let's take the top 5 nearest areas.
-        const nearestAreaIds = nearestAreas.slice(0, 5).map(a => a.id)
+        if (siblingAreaIds.length === 0) return results
 
         const { data: neighborItems, error: neighborError } = await supabase
             .from('marketplace_items')
             .select(LISTING_FIELDS)
             .eq('status', 'active')
-            .in('area_id', nearestAreaIds)
+            .in('area_id', siblingAreaIds)
             .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
             .order('created_at', { ascending: false })
             .limit(limit - results.length)

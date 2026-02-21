@@ -8,8 +8,6 @@ export const placeSchema = z.object({
 
     // Location
     areaId: z.string().uuid("يرجى اختيار منطقة صحيحة").optional().nullable(),
-    latitude: z.number().min(-90).max(90).optional().nullable(),
-    longitude: z.number().min(-180).max(180).optional().nullable(),
 
     // Category
     categoryId: z.string().uuid("يرجى اختيار تصنيف صحيح"),

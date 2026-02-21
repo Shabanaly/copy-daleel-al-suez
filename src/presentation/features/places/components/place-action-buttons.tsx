@@ -38,7 +38,7 @@ export function PlaceActionButtons({
             } catch {
                 console.log('Share cancelled')
             }
-        } else {
+        } else if (navigator.clipboard) {
             // Fallback: copy link
             navigator.clipboard.writeText(window.location.href)
             setShareSuccess(true)

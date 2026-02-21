@@ -1,3 +1,5 @@
+'use client';
+
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight, MapPin, Star, Clock, Tag, Youtube, Eye } from "lucide-react";
@@ -14,13 +16,12 @@ import { useSpyOnPlace } from "@/lib/user-spy/use-spy-on";
 
 import { DeliveryOptions } from "@/presentation/features/places/components/delivery-options";
 import { PeakHoursIndicator } from "@/presentation/features/places/components/peak-hours-indicator";
-import { Badge, OpenBadge, ClosedBadge } from '@/presentation/components/ui/Badge';
-import { isPlaceOpen, getStatusText } from '@/presentation/features/places/utils/place-utils';
+import { Badge } from '@/presentation/components/ui/Badge';
+import { getStatusText } from '@/presentation/features/places/utils/place-utils';
 import { Breadcrumbs } from '@/presentation/components/ui/Breadcrumbs';
 import { PlaceStickyHeader } from '@/presentation/features/places/components/place-sticky-header';
 import { PlaceGalleryGrid } from '@/presentation/features/places/components/place-gallery-grid';
 import { PlaceFooterActions } from '@/presentation/features/places/components/place-footer-actions';
-import { Map } from '@/presentation/components/maps';
 
 interface PlaceDetailsViewProps {
     place: Place;
@@ -242,25 +243,11 @@ export function PlaceDetailsView({
                                 {place.address}
                             </p>
                             <div className="rounded-xl overflow-hidden border border-border shadow-inner">
-                                {place.latitude && place.longitude ? (
-                                    <Map
-                                        height="350px"
-                                        zoom={15}
-                                        center={[place.latitude, place.longitude]}
-                                        markers={[{
-                                            id: place.id,
-                                            position: [place.latitude, place.longitude],
-                                            title: place.name,
-                                            type: 'place'
-                                        }]}
-                                    />
-                                ) : (
-                                    <GoogleMapEmbed
-                                        mapLink={place.googleMapsUrl || ''}
-                                        placeName={place.name}
-                                        address={place.address}
-                                    />
-                                )}
+                                <GoogleMapEmbed
+                                    mapLink={place.googleMapsUrl || ''}
+                                    placeName={place.name}
+                                    address={place.address}
+                                />
                             </div>
                             {place.googleMapsUrl && (
                                 <div className="mt-4">

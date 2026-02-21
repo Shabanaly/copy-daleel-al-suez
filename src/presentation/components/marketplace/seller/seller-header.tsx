@@ -31,7 +31,7 @@ export function SellerHeader({ profile, stats, isOwner = false, isDashboard = fa
                 text: `تصفح إعلانات ${profile.full_name} على دليل السويس`,
                 url: window.location.href,
             })
-        } else {
+        } else if (navigator.clipboard) {
             navigator.clipboard.writeText(window.location.href)
             // Ideally show toast here
         }

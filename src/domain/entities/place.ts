@@ -9,8 +9,6 @@ export interface Place {
     areaId?: string;
     areaName?: string;
     areaSlug?: string;
-    latitude?: number;
-    longitude?: number;
 
     // Category
     categoryId?: string;

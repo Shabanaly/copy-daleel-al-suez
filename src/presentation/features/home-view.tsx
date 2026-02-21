@@ -1,3 +1,6 @@
+'use client';
+
+import React, { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { Place } from "@/domain/entities/place";
 import { Category } from "@/domain/entities/category";
@@ -17,9 +20,11 @@ import { QuickDiscoveryGrid } from "@/presentation/components/home/quick-discove
 import { PersonalizedSection } from "@/presentation/components/home/personalized-section";
 import { TrendingUp, Clock as ClockIcon } from "lucide-react";
 
-import { ArrowLeft, Sparkles, Calendar, MapPin, Search, Utensils, Pill, Coffee, Landmark, Navigation } from "lucide-react";
+import { ArrowLeft, Sparkles, Calendar, MapPin, Search, Utensils, Pill, Coffee, Landmark, Navigation, Store } from "lucide-react";
 import { HeaderSearchBar } from "@/presentation/components/shared/layout/header-search-bar";
 import { HorizontalScroll } from "@/presentation/components/shared/ui/horizontal-scroll";
+import { useSmartLogic } from "@/hooks/use-smart-logic";
+import { usePersistence } from "@/hooks/use-persistence";
 
 const CATEGORY_ICONS: Record<string, React.ReactNode> = {
     'restaurants': <Utensils size={14} />,
@@ -65,6 +70,56 @@ export function HomeView({
     prayerTimes,
     heroSuggestions = []
 }: HomeViewProps) {
+    const { personalizationLevel, recommendations } = useSmartLogic();
+    const [hasMounted, setHasMounted] = useState(false);
+    usePersistence();
+
+    useEffect(() => {
+        setHasMounted(true);
+    }, []);
+
+    // 1. Dynamic Greeting based on profile
+    const greeting = useMemo(() => {
+        if (!hasMounted) return "دليل السويس دليلك لكل حاجة في السويس";
+        if (personalizationLevel === 'advanced') return "أهلاً بك يا صديقي السويسي!";
+        if (personalizationLevel === 'intermediate') return "منورنا تاني.. دليلك جاهز!";
+        return "دليل السويس دليلك لكل حاجة في السويس";
+    }, [personalizationLevel, hasMounted]);
+
+    // 2. Personalized Sections Order
+    const sections = useMemo(() => {
+        const baseSections = [
+            {
+                id: 'trending', content: (
+                    <HorizontalScroll key="trending" title="الأكثر رواجاً" subtitle="الأماكن الأكثر رواجاً" viewAllLink="/places?sort=trending">
+                        {trendingPlaces.map(place => <PlaceCard key={place.id} place={place} isCompact />)}
+                    </HorizontalScroll>
+                )
+            },
+            {
+                id: 'latest', content: (
+                    <HorizontalScroll key="latest" title="إيه الجديد؟" subtitle="أحدث الأماكن اللي انضمت لعيلة دليل السويس" viewAllLink="/places?sort=newest">
+                        {latestPlaces.map(place => <PlaceCard key={place.id} place={place} isCompact />)}
+                    </HorizontalScroll>
+                )
+            },
+            {
+                id: 'top-rated', content: (
+                    <HorizontalScroll key="top-rated" title="بترشيح المستخدمين" subtitle="أفضل الأماكن جودة بناءً على تقييمات أهل السويس" viewAllLink="/places?sort=rating">
+                        {topRatedPlaces.map(place => <PlaceCard key={place.id} place={place} isCompact />)}
+                    </HorizontalScroll>
+                )
+            }
+        ];
+
+        // Move Top Rated to first if user is an "Advanced" user
+        if (hasMounted && personalizationLevel === 'advanced') {
+            const topRated = baseSections.splice(2, 1)[0];
+            baseSections.unshift(topRated);
+        }
+
+        return baseSections;
+    }, [personalizationLevel, hasMounted, trendingPlaces, latestPlaces, topRatedPlaces]);
 
     return (
         <div className="pb-12">
@@ -87,7 +142,7 @@ export function HomeView({
                 <div className="relative z-10 text-center px-4 max-w-4xl mx-auto space-y-8">
                     <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full border border-white/20 mb-4">
                         <Sparkles size={16} className="text-yellow-300" />
-                        <span className="text-sm font-medium">يا بختك يا سويسي.. دليلك لكل حاجة في بلدك</span>
+                        <span className="text-sm font-medium">دليل السويس.. دليلك لكل حاجة في السويس</span>
                     </div>
 
                     <h1 className="text-4xl md:text-7xl font-bold mb-6 leading-tight">
@@ -124,40 +179,11 @@ export function HomeView({
                 <PersonalizedSection />
             </div>
 
+            {/* Smart Sections - Dynamically Ordered */}
             <div className="space-y-20 mt-16">
-                {/* Trending Section */}
-                <HorizontalScroll
-                    title="الأكثر رواجاً"
-                    subtitle="الأماكن الأكثر رواجاً"
-                    viewAllLink="/places?sort=trending"
-                >
-                    {trendingPlaces.map(place => (
-                        <PlaceCard key={place.id} place={place} isCompact />
-                    ))}
-                </HorizontalScroll>
+                {sections.map((section: { id: string, content: React.ReactNode }) => section.content)}
 
-                {/* Newly Added Section */}
-                <HorizontalScroll
-                    title="إيه الجديد؟"
-                    subtitle="أحدث الأماكن اللي انضمت لعيلة دليل السويس"
-                    viewAllLink="/places?sort=newest"
-                >
-                    {latestPlaces.map(place => (
-                        <PlaceCard key={place.id} place={place} isCompact />
-                    ))}
-                </HorizontalScroll>
-
-                {/* Top Rated Section - NEW Smart Suggestion */}
-                <HorizontalScroll
-                    title="بترشيح المستخدمين"
-                    subtitle="أفضل الأماكن جودة بناءً على تقييمات أهل السويس"
-                    viewAllLink="/places?sort=rating"
-                >
-                    {topRatedPlaces.map(place => (
-                        <PlaceCard key={place.id} place={place} isCompact />
-                    ))}
-                </HorizontalScroll>
-
+                {/* Upcoming Events Grid */}
                 {/* Upcoming Events Grid - Converted to Horizontal Scroll */}
                 {events.length > 0 && (
                     <div className="space-y-8">
@@ -223,9 +249,9 @@ export function HomeView({
                                     <SuggestionButton icon={<Utensils size={14} />} label="مطاعم" href="/categories/restaurants" isDark />
                                     <SuggestionButton icon={<Pill size={14} />} label="صيدليات" href="/categories/pharmacies" isDark />
                                     <SuggestionButton icon={<Coffee size={14} />} label="كافيهات" href="/categories/cafes" isDark />
+                                    <SuggestionButton icon={<Store size={14} />} label="السوق" href="/marketplace" isPrimary />
                                 </>
                             )}
-                            <SuggestionButton icon={<Navigation size={14} />} label="خريطة السويس" href="/explore/map" isPrimary />
                         </div>
                     </div>
                 </div>

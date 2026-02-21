@@ -12,8 +12,6 @@ export interface SuezEvent {
     endDate: string;
 
     location?: string;
-    latitude?: number;
-    longitude?: number;
 
     placeId?: string;
     placeName?: string;
