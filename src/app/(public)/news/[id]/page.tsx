@@ -3,6 +3,7 @@ import { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { Calendar, Share2, Tag } from "lucide-react";
+import { ArticleTracker } from "@/presentation/features/news/article-tracker";
 
 interface PageProps {
     params: {
@@ -177,6 +178,8 @@ export default async function ArticleDetailsPage({ params }: PageProps) {
                     </div>
                 </div>
             </div>
+
+            <ArticleTracker id={article.id} title={article.title} />
         </article>
     );
 }

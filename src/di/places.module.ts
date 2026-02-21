@@ -10,6 +10,9 @@ import { SupabaseCategoryRepository } from "@/data/repositories/supabase-categor
 import { GetCategoriesUseCase } from "@/domain/use-cases/get-categories.usecase";
 import { SupabaseAreaRepository } from "@/data/repositories/supabase-area.repository";
 import { GetAreasUseCase } from "@/domain/use-cases/get-areas.usecase";
+import { GetTrendingPlacesUseCase } from "@/domain/use-cases/get-trending-places.usecase";
+import { GetLatestPlacesUseCase } from "@/domain/use-cases/get-latest-places.usecase";
+import { GetTopRatedPlacesUseCase } from "@/domain/use-cases/get-top-rated-places.usecase";
 
 // 1. Repositories
 export const placeRepository = new SupabasePlaceRepository();
@@ -26,3 +29,6 @@ export const createPlaceUseCase = new CreatePlaceUseCase(placeRepository);
 export const updatePlaceUseCase = new UpdatePlaceUseCase(placeRepository);
 export const getPlaceByIdUseCase = new GetPlaceByIdUseCase(placeRepository);
 export const getAreasUseCase = new GetAreasUseCase(areaRepository);
+export const getTrendingPlacesUseCase = new GetTrendingPlacesUseCase(placeRepository);
+export const getLatestPlacesUseCase = new GetLatestPlacesUseCase(placeRepository);
+export const getTopRatedPlacesUseCase = new GetTopRatedPlacesUseCase(placeRepository);

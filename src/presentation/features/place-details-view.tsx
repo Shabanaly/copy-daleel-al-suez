@@ -10,6 +10,7 @@ import { GoogleMapEmbed } from "@/presentation/features/places/components/google
 import { PlaceCard } from "@/presentation/features/places/components/place-card";
 import { ReviewsSectionWrapper } from "@/presentation/features/reviews/components/reviews-section-wrapper";
 import { VideoEmbed } from "@/presentation/components/shared/video-embed";
+import { useSpyOnPlace } from "@/lib/user-spy/use-spy-on";
 
 import { DeliveryOptions } from "@/presentation/features/places/components/delivery-options";
 import { PeakHoursIndicator } from "@/presentation/features/places/components/peak-hours-indicator";
@@ -38,6 +39,8 @@ export function PlaceDetailsView({
     currentUserId,
     userReview
 }: PlaceDetailsViewProps) {
+    useSpyOnPlace(place.id, place.categorySlug);
+
     return (
         <div className="min-h-screen bg-background pb-12 relative">
             <ViewTracker tableName="places" id={place.id} />

@@ -3,6 +3,7 @@ import { Footer } from "@/presentation/components/shared/layout/footer";
 import { DesktopSidebar } from "@/presentation/components/shared/layout/desktop-sidebar";
 import { SupabaseSettingsRepository } from "@/data/repositories/supabase-settings.repository";
 import { createClient } from "@/lib/supabase/server";
+import { SmartAssistant } from "@/presentation/components/shared/smart-assistant";
 
 export default async function PublicLayout({ children }: { children: React.ReactNode }) {
     const supabase = await createClient();
@@ -19,6 +20,7 @@ export default async function PublicLayout({ children }: { children: React.React
             <div className="md:pr-[64px]">
                 <Footer settings={settings} />
             </div>
+            <SmartAssistant />
         </div>
     );
 }

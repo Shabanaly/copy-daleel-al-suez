@@ -13,10 +13,49 @@ export class SupabasePlaceRepository implements IPlaceRepository {
             .select("*")
             .eq("status", "active")
             .eq("is_featured", true)
-            .limit(6);
+            .limit(10);
 
         if (error) throw new Error(error.message);
 
+        return PlaceMapper.toEntities(data);
+    }
+
+    async getTrendingPlaces(limit: number = 8, client?: unknown): Promise<Place[]> {
+        const supabaseClient = (client as import('@supabase/supabase-js').SupabaseClient) || this.supabase;
+        const { data, error } = await supabaseClient
+            .from("places")
+            .select("*")
+            .eq("status", "active")
+            .order("view_count", { ascending: false })
+            .limit(limit);
+
+        if (error) return [];
+        return PlaceMapper.toEntities(data);
+    }
+
+    async getLatestPlaces(limit: number = 8, client?: unknown): Promise<Place[]> {
+        const supabaseClient = (client as import('@supabase/supabase-js').SupabaseClient) || this.supabase;
+        const { data, error } = await supabaseClient
+            .from("places")
+            .select("*")
+            .eq("status", "active")
+            .order("created_at", { ascending: false })
+            .limit(limit);
+
+        if (error) return [];
+        return PlaceMapper.toEntities(data);
+    }
+
+    async getTopRatedPlaces(limit: number = 8, client?: unknown): Promise<Place[]> {
+        const supabaseClient = (client as import('@supabase/supabase-js').SupabaseClient) || this.supabase;
+        const { data, error } = await supabaseClient
+            .from("places")
+            .select("*")
+            .eq("status", "active")
+            .order("rating", { ascending: false })
+            .limit(limit);
+
+        if (error) return [];
         return PlaceMapper.toEntities(data);
     }
 

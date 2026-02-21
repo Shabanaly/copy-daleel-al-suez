@@ -2,6 +2,9 @@ import { Place } from "../entities/place";
 
 export interface IPlaceRepository {
     getFeaturedPlaces(client?: unknown): Promise<Place[]>;
+    getTrendingPlaces(limit: number, client?: unknown): Promise<Place[]>;
+    getLatestPlaces(limit: number, client?: unknown): Promise<Place[]>;
+    getTopRatedPlaces(limit: number, client?: unknown): Promise<Place[]>;
     getPlacesByCategory(categorySlug: string, client?: unknown): Promise<Place[]>;
     searchPlaces(query: string, areaId?: string, client?: unknown): Promise<Place[]>;
 

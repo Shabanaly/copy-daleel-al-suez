@@ -152,3 +152,24 @@ export async function getMultiplePlacesAction(ids: string[]): Promise<Place[]> {
         return [];
     }
 }
+
+export async function getPersonalizedRecommendations(interestTag: string): Promise<Place[]> {
+    try {
+        if (!interestTag) return [];
+
+        const supabase = await createClient();
+        const placeRepository = new SupabasePlaceRepository(supabase);
+
+        // If it's a marketplace interest, we might want to return marketplace items or related places
+        // For now, let's focus on places. If interestTag starts with market_, we strip it.
+        const categorySlug = interestTag.startsWith('market_')
+            ? interestTag.replace('market_', '')
+            : interestTag;
+
+        // Fetch places in this category
+        return await placeRepository.getPlacesByCategory(categorySlug);
+    } catch (error) {
+        console.error('Error getting personalized recommendations:', error);
+        return [];
+    }
+}

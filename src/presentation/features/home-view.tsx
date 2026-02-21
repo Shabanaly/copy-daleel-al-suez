@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { RecentlyViewedSection } from "@/presentation/components/home/recently-viewed-section";
 import { CityPulseTicker } from "@/presentation/components/home/city-pulse-ticker";
 import { QuickDiscoveryGrid } from "@/presentation/components/home/quick-discovery-grid";
+import { PersonalizedSection } from "@/presentation/components/home/personalized-section";
 import { TrendingUp, Clock as ClockIcon } from "lucide-react";
 
 import { ArrowLeft, Sparkles, Calendar, MapPin, Search, Utensils, Pill, Coffee, Landmark, Navigation } from "lucide-react";
@@ -41,6 +42,9 @@ interface HeroSuggestion {
 
 interface HomeViewProps {
     featuredPlaces: Place[];
+    trendingPlaces: Place[];
+    latestPlaces: Place[];
+    topRatedPlaces: Place[];
     categories: Category[];
     events: SuezEvent[];
     latestArticles: Article[];
@@ -49,10 +53,18 @@ interface HomeViewProps {
     heroSuggestions?: HeroSuggestion[];
 }
 
-export function HomeView({ featuredPlaces, categories, events, latestArticles, weather, prayerTimes, heroSuggestions = [] }: HomeViewProps) {
-    // Determine Trending and New additions
-    const trendingPlaces = [...featuredPlaces].sort((a, b) => (b.viewCount || 0) - (a.viewCount || 0)).slice(0, 4);
-    const newAdditions = [...featuredPlaces].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 4);
+export function HomeView({
+    featuredPlaces,
+    trendingPlaces,
+    latestPlaces,
+    topRatedPlaces,
+    categories,
+    events,
+    latestArticles,
+    weather,
+    prayerTimes,
+    heroSuggestions = []
+}: HomeViewProps) {
 
     return (
         <div className="pb-12">
@@ -107,11 +119,16 @@ export function HomeView({ featuredPlaces, categories, events, latestArticles, w
             {/* Personalized: Recently Viewed */}
             <RecentlyViewedSection />
 
+            {/* Smart: Personalized Recommendations based on Spy Engine */}
+            <div className="mt-16">
+                <PersonalizedSection />
+            </div>
+
             <div className="space-y-20 mt-16">
                 {/* Trending Section */}
                 <HorizontalScroll
                     title="الأكثر رواجاً"
-                    subtitle="الأماكن اللي مكسرة الدنيا آخر 48 ساعة"
+                    subtitle="الأماكن الأكثر رواجاً"
                     viewAllLink="/places?sort=trending"
                 >
                     {trendingPlaces.map(place => (
@@ -125,7 +142,18 @@ export function HomeView({ featuredPlaces, categories, events, latestArticles, w
                     subtitle="أحدث الأماكن اللي انضمت لعيلة دليل السويس"
                     viewAllLink="/places?sort=newest"
                 >
-                    {newAdditions.map(place => (
+                    {latestPlaces.map(place => (
+                        <PlaceCard key={place.id} place={place} isCompact />
+                    ))}
+                </HorizontalScroll>
+
+                {/* Top Rated Section - NEW Smart Suggestion */}
+                <HorizontalScroll
+                    title="بترشيح المستخدمين"
+                    subtitle="أفضل الأماكن جودة بناءً على تقييمات أهل السويس"
+                    viewAllLink="/places?sort=rating"
+                >
+                    {topRatedPlaces.map(place => (
                         <PlaceCard key={place.id} place={place} isCompact />
                     ))}
                 </HorizontalScroll>

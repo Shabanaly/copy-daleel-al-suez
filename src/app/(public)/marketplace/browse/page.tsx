@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/server';
 import type { Metadata } from 'next';
 import { CategoryViewTracker } from '@/presentation/components/marketplace/category-view-tracker';
 import { SearchTracker } from '@/presentation/components/marketplace/search-tracker';
+import { MarketplaceSpy } from '@/presentation/components/marketplace/marketplace-spy';
 
 export const metadata: Metadata = {
     title: 'تصفح سوق السويس — كل الإعلانات | دليل السويس',
@@ -75,6 +76,7 @@ export default async function MarketplaceBrowsePage({ searchParams }: Marketplac
         <div className="container mx-auto px-4 py-8">
             <CategoryViewTracker category={params.category || ''} subType={subType} />
             <SearchTracker />
+            <MarketplaceSpy category={params.category} />
             {/* Page Title & Info */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 md:gap-4 mb-6">
                 <div>
