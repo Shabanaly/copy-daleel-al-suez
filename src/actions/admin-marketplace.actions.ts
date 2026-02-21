@@ -130,7 +130,7 @@ export async function approveItemAction(itemId: string): Promise<{ success: bool
         })
 
         revalidatePath('/marketplace')
-        revalidatePath('/marketplace/admin')
+        revalidatePath('/content-admin/marketplace')
         return { success: true }
     } catch (error: any) {
         return { success: false, error: error.message }
@@ -171,7 +171,7 @@ export async function rejectItemAction(itemId: string, reason: string): Promise<
             new_data: { reason: reason.trim() },
         })
 
-        revalidatePath('/marketplace/admin')
+        revalidatePath('/content-admin/marketplace')
         return { success: true }
     } catch (error: any) {
         return { success: false, error: error.message }
@@ -195,7 +195,7 @@ export async function featureItemAction(itemId: string, featured: boolean): Prom
         if (error) throw error
 
         revalidatePath('/marketplace')
-        revalidatePath('/marketplace/admin')
+        revalidatePath('/content-admin/marketplace')
         return { success: true }
     } catch (error: any) {
         return { success: false, error: error.message }

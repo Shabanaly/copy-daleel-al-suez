@@ -193,7 +193,7 @@ export async function updateReportStatusAction(reportId: string, status: string)
             }
         }
 
-        revalidatePath('/marketplace/admin/reports')
+        revalidatePath('/admin/reports')
         return { success: true }
     } catch (error: any) {
         return { success: false, error: error.message }
@@ -295,7 +295,7 @@ export async function resolveReportAction(reportId: string, itemId: string, acti
         }
         // -----------------------------
 
-        revalidatePath('/marketplace/admin/reports')
+        revalidatePath('/admin/reports')
         return { success: true }
     } catch (error: any) {
         return { success: false, error: error.message }

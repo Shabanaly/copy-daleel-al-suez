@@ -131,7 +131,7 @@ export async function createMarketplaceItemAction(rawData: {
                 title: 'إعلان جديد في الماركت 🆕',
                 message: `قام المستخدم بإضافة إعلان جديد "${cleanData.title}" بانتظار المراجعة.`,
                 type: 'system_alert',
-                data: { itemId: newItem?.id || 'unknown', slug, url: '/marketplace/admin' }
+                data: { itemId: newItem?.id || 'unknown', slug, url: '/content-admin/marketplace' }
             })
         } else {
             // Notification skipped for admin-posted items as they're auto-approved.
