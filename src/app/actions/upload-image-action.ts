@@ -16,11 +16,14 @@ export async function uploadImageAction(formData: FormData, bucketName: string =
         const urls: string[] = []
 
         for (const file of files) {
+            console.log(`Processing file: ${file.name}, size: ${(file.size / 1024 / 1024).toFixed(2)}MB, type: ${file.type}`)
+
             // 1. Convert File to Buffer
             const buffer = Buffer.from(await file.arrayBuffer())
 
             // 2. Process with Sharp
             const processedBuffer = await sharp(buffer)
+                .rotate() // Auto-rotate based on EXIF orientation
                 .resize(1200, 1200, {
                     fit: 'inside',
                     withoutEnlargement: true
@@ -42,7 +45,7 @@ export async function uploadImageAction(formData: FormData, bucketName: string =
 
             if (uploadError) {
                 console.error('Upload Error:', uploadError)
-                continue
+                return { success: false, error: `فشل رفع صورة ${file.name}: ${uploadError.message}` }
             }
 
             // 5. Get Public URL

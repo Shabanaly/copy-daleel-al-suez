@@ -48,6 +48,24 @@ export async function createPlaceAction(rawData: any): Promise<PlaceState> {
         revalidatePath('/')
         revalidatePath('/places')
 
+        // 3. Notify Admins
+        try {
+            const { notifyAdminsAction } = await import('./notifications.actions')
+            await notifyAdminsAction({
+                title: 'مكان جديد بانتظار المراجعة 🆕',
+                message: `تم إضافة مكان جديد "${validatedData.name}" بانتظار المراجعة والنشر.`,
+                type: 'system_alert',
+                data: {
+                    placeId: (place as any)?.id || 'unknown',
+                    slug: (place as any)?.slug || '',
+                    url: '/content-admin/places'
+                }
+            })
+        } catch (notifyError) {
+            console.error("Failed to notify admins about new place:", notifyError)
+            // Don't fail the whole action if notification fails
+        }
+
         return { success: true, message: "تم إرسال المكان بنجاح، بانتظار المراجعة", data: place }
     } catch (error) {
         console.error("Create Place Error:", error)

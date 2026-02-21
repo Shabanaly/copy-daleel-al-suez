@@ -3,6 +3,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
+import { SupabaseNotificationRepository } from '@/data/repositories/supabase-notification.repository'
+import { Notification as DomainNotification } from '@/domain/entities/notification'
 
 export interface Notification {
     id: string
@@ -23,6 +25,20 @@ export type CreateNotificationParams = {
     data?: any
 }
 
+// Helper to map domain entity to UI-friendly object
+function mapToUINotification(n: DomainNotification): Notification {
+    return {
+        id: n.id,
+        user_id: n.userId,
+        title: n.title,
+        message: n.message,
+        type: n.type,
+        is_read: n.isRead,
+        data: n.data,
+        created_at: n.createdAt
+    }
+}
+
 // -----------------------------------------------------------------------------
 // Public Actions (Called by Client)
 // -----------------------------------------------------------------------------
@@ -34,23 +50,24 @@ export async function getNotificationsAction(page = 1, limit = 10) {
 
         if (!user) return { success: false, error: 'Unauthorized' }
 
+        const repository = new SupabaseNotificationRepository(supabase)
         const from = (page - 1) * limit
-        const to = from + limit - 1
 
-        const { data, count, error } = await supabase
+        const notifications = await repository.getUserNotifications(user.id, limit, from)
+
+        // We still need the total count for hasMore, repository currently doesn't return count with notifications
+        // Let's get the unread count or a total count if needed. 
+        // For simplicity, let's keep the legacy total count fetch for now or update repository.
+        const { count } = await supabase
             .from('notifications')
-            .select('*', { count: 'exact' })
+            .select('*', { count: 'exact', head: true })
             .eq('user_id', user.id)
-            .order('created_at', { ascending: false })
-            .range(from, to)
-
-        if (error) throw error
 
         return {
             success: true,
-            notifications: data as Notification[],
+            notifications: notifications.map(mapToUINotification),
             total: count || 0,
-            hasMore: (count || 0) > to + 1
+            hasMore: (count || 0) > from + limit
         }
     } catch (error: any) {
         console.error('Error fetching notifications:', error)
@@ -65,15 +82,10 @@ export async function getUnreadNotificationsCountAction() {
 
         if (!user) return { success: false, count: 0 }
 
-        const { count, error } = await supabase
-            .from('notifications')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', user.id)
-            .eq('is_read', false)
+        const repository = new SupabaseNotificationRepository(supabase)
+        const count = await repository.getUnreadCount(user.id)
 
-        if (error) throw error
-
-        return { success: true, count: count || 0 }
+        return { success: true, count }
     } catch (error: any) {
         return { success: false, error: error.message }
     }
@@ -86,13 +98,8 @@ export async function markNotificationAsReadAction(notificationId: string) {
 
         if (!user) return { success: false, error: 'Unauthorized' }
 
-        const { error } = await supabase
-            .from('notifications')
-            .update({ is_read: true })
-            .eq('id', notificationId)
-            .eq('user_id', user.id)
-
-        if (error) throw error
+        const repository = new SupabaseNotificationRepository(supabase)
+        await repository.markAsRead(notificationId)
 
         revalidatePath('/notifications')
         return { success: true }
@@ -106,31 +113,14 @@ export async function markAllNotificationsAsReadAction() {
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
 
-        if (!user) {
-            console.error('❌ markAllNotificationsAsReadAction: User not found')
-            return { success: false, error: 'Unauthorized' }
-        }
+        if (!user) return { success: false, error: 'Unauthorized' }
 
-        console.log('🔄 markAllNotificationsAsReadAction started for user:', user.id)
-
-        const { error, count } = await supabase
-            .from('notifications')
-            .update({ is_read: true })
-            .eq('user_id', user.id)
-            .eq('is_read', false)
-            .select('id')
-
-        if (error) {
-            console.error('❌ markAllNotificationsAsReadAction DB Error:', error)
-            throw error
-        }
-
-        console.log(`✅ markAllNotificationsAsReadAction success. Updated ${count} rows.`)
+        const repository = new SupabaseNotificationRepository(supabase)
+        await repository.markAllAsRead(user.id)
 
         revalidatePath('/notifications')
         return { success: true }
     } catch (error: any) {
-        console.error('❌ markAllNotificationsAsReadAction Failed:', error.message)
         return { success: false, error: error.message }
     }
 }
@@ -139,80 +129,51 @@ export async function markAllNotificationsAsReadAction() {
 // Internal Actions (Called by other Server Actions / Webhooks)
 // -----------------------------------------------------------------------------
 
-/**
- * Creates a notification safely using Admin privileges.
- * This should ONLY be called from server-side logic (e.g. after approving an item).
- */
 export async function createNotificationAction(params: CreateNotificationParams) {
     try {
-        const hasServiceKey = !!process.env.SUPABASE_SERVICE_ROLE_KEY;
-        console.log('🔔 createNotificationAction started', {
+        const repository = new SupabaseNotificationRepository(supabaseAdmin)
+        const notification = await repository.create({
             userId: params.userId,
-            type: params.type,
-            hasServiceKey: hasServiceKey ? 'YES' : 'NO'
-        });
+            title: params.title,
+            message: params.message,
+            type: params.type as any,
+            data: params.data
+        })
 
-        if (!hasServiceKey) {
-            console.error('❌ CRITICAL: SUPABASE_SERVICE_ROLE_KEY is missing!');
-            return { success: false, error: 'Configuration Error: Service Key Missing' };
-        }
-
-        // Use supabaseAdmin to bypass RLS for system notifications (admin -> user)
-        const { data: inserted, error } = await supabaseAdmin
-            .from('notifications')
-            .insert({
-                user_id: params.userId,
-                title: params.title,
-                message: params.message,
-                type: params.type,
-                data: params.data || {},
-                is_read: false
-            })
-            .select()
-            .single();
-
-        if (error) {
-            console.error('❌ Error creating notification:', error);
-            throw error;
-        }
-
-        console.log('✅ Notification PERSISTED successfully:', inserted);
-        return { success: true, notification: inserted };
+        return { success: true, notification: mapToUINotification(notification) }
     } catch (error: any) {
-        console.error('❌ createNotificationAction failed:', error);
-        return { success: false, error: error.message };
+        console.error('❌ createNotificationAction failed:', error)
+        return { success: false, error: error.message }
     }
 }
 
-/**
- * Sends a notification to all admins (admin & super_admin).
- * Useful for new items, reports, system alerts.
- */
 export async function notifyAdminsAction(params: Omit<CreateNotificationParams, 'userId'>) {
     try {
-        console.log('🔔 notifyAdminsAction started', params.title)
+        const [profilesRes, adminsTableRes] = await Promise.all([
+            supabaseAdmin
+                .from('profiles')
+                .select('id')
+                .or('role.ilike.admin,role.ilike.super_admin'),
+            supabaseAdmin
+                .from('admins')
+                .select('user_id')
+        ])
 
-        // 1. Get all admin IDs
-        const { data: admins, error: fetchError } = await supabaseAdmin
-            .from('profiles')
-            .select('id')
-            .in('role', ['admin', 'super_admin'])
+        if (profilesRes.error) throw profilesRes.error
 
-        if (fetchError) {
-            console.error('❌ Error fetching admins:', fetchError)
-            throw fetchError
-        }
+        const adminIds = new Set<string>()
+        profilesRes.data?.forEach(p => adminIds.add(p.id))
+        adminsTableRes.data?.forEach(a => adminIds.add(a.user_id))
 
-        console.log('👥 Admins found:', admins?.length || 0)
+        if (adminIds.size === 0) return { success: false, error: 'No admins found' }
 
-        if (!admins || admins.length === 0) {
-            console.warn('⚠️ No admins found to notify')
-            return { success: true, message: 'No admins found' }
-        }
+        const repository = new SupabaseNotificationRepository(supabaseAdmin)
 
-        // 2. Prepare notifications payload
-        const notifications = admins.map(admin => ({
-            user_id: admin.id,
+        // We use bulk insert here which repository doesn't have yet. 
+        // For performance, we keep the bulk insert but we can wrap it or just use supabaseAdmin here as it's a specialized case.
+        // Actually, let's keep the bulk insert logic here but align data keys.
+        const notifications = Array.from(adminIds).map(adminId => ({
+            user_id: adminId,
             title: params.title,
             message: params.message,
             type: params.type,
@@ -220,17 +181,12 @@ export async function notifyAdminsAction(params: Omit<CreateNotificationParams, 
             is_read: false
         }))
 
-        // 3. Bulk insert
         const { error: insertError } = await supabaseAdmin
             .from('notifications')
             .insert(notifications)
 
-        if (insertError) {
-            console.error('❌ Error inserting notifications:', insertError)
-            throw insertError
-        }
+        if (insertError) throw insertError
 
-        console.log('✅ Notifications sent successfully to', notifications.length, 'admins')
         return { success: true }
     } catch (error: any) {
         console.error('❌ notifyAdminsAction failed:', error)

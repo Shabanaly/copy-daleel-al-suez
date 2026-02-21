@@ -76,8 +76,8 @@ export async function getBusinessDashboardDataAction(placeId: string) {
             throw new Error('المكان غير موجود')
         }
 
-        // Security Check: Only owner or admin can access dashboard
-        if (place.ownerId !== user.id) {
+        // Security Check: Only owner, creator or admin can access dashboard
+        if (place.ownerId !== user.id && place.createdBy !== user.id) {
             // Check if user is admin (optional but helpful)
             const { data: profile } = await (await createClient())
                 .from('profiles')
@@ -107,7 +107,7 @@ export async function createFlashDealAction(data: CreateFlashDealDTO) {
     try {
         // Security check
         const place = await placeRepository.getPlaceById(data.placeId)
-        if (!place || place.ownerId !== user.id) {
+        if (!place || (place.ownerId !== user.id && place.createdBy !== user.id)) {
             throw new Error('ليس لديك صلاحية لإنشاء عرض لهذا المكان')
         }
 

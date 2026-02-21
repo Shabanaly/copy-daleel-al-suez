@@ -48,12 +48,45 @@ export async function updatePlaceStatusAction(id: string, status: 'active' | 'pe
         await requireAdmin()
         const supabase = await createClient()
 
+        // جلب بيانات المكان قبل التحديث للإشعار
+        const { data: place } = await supabase
+            .from('places')
+            .select('name, slug, created_by, owner_id')
+            .eq('id', id)
+            .single()
+
         const { error } = await supabase
             .from('places')
             .update({ status, updated_at: new Date().toISOString() })
             .eq('id', id)
 
         if (error) throw error
+
+        // إرسال إشعار للمستخدم إذا تغيرت الحالة
+        if (place) {
+            const targetUserId = place.owner_id || place.created_by
+            if (targetUserId) {
+                const { createNotificationAction } = await import('./notifications.actions')
+
+                if (status === 'active') {
+                    await createNotificationAction({
+                        userId: targetUserId,
+                        title: 'تم نشر مكانك بنجاح! 🚀',
+                        message: `رائع! تم تفعيل ونشر "${place.name}" وهو الآن متاح للجميع على المنصة.`,
+                        type: 'status_update',
+                        data: { placeId: id, slug: place.slug, status: 'active' }
+                    })
+                } else if (status === 'inactive') {
+                    await createNotificationAction({
+                        userId: targetUserId,
+                        title: 'تم إيقاف نشاط المكان مؤقتاً ⚠️',
+                        message: `تم تغيير حالة "${place.name}" إلى غير نشط من قبل الإدارة.`,
+                        type: 'status_update',
+                        data: { placeId: id, status: 'inactive' }
+                    })
+                }
+            }
+        }
 
         revalidatePath('/content-admin/places')
         revalidatePath('/places')
@@ -90,12 +123,46 @@ export async function bulkUpdatePlacesStatusAction(ids: string[], status: 'activ
         await requireAdmin()
         const supabase = await createClient()
 
+        // جلب بيانات الأماكن قبل التحديث للإشعارات
+        const { data: places } = await supabase
+            .from('places')
+            .select('id, name, slug, created_by, owner_id')
+            .in('id', ids)
+
         const { error } = await supabase
             .from('places')
             .update({ status, updated_at: new Date().toISOString() })
             .in('id', ids)
 
         if (error) throw error
+
+        // إرسال إشعارات للمستخدمين
+        if (places && places.length > 0 && (status === 'active' || status === 'inactive')) {
+            const { createNotificationAction } = await import('./notifications.actions')
+
+            for (const place of places) {
+                const targetUserId = place.owner_id || place.created_by
+                if (!targetUserId) continue
+
+                if (status === 'active') {
+                    await createNotificationAction({
+                        userId: targetUserId,
+                        title: 'تم تفعيل مكانك بنجاح! 🚀',
+                        message: `رائع! تم تفعيل "${place.name}" وهو الآن متاح للجميع على المنصة.`,
+                        type: 'status_update',
+                        data: { placeId: place.id, slug: place.slug, status: 'active' }
+                    })
+                } else if (status === 'inactive') {
+                    await createNotificationAction({
+                        userId: targetUserId,
+                        title: 'تم إيقاف نشاط المكان مؤقتاً ⚠️',
+                        message: `تم تغيير حالة "${place.name}" إلى غير نشط من قبل الإدارة.`,
+                        type: 'status_update',
+                        data: { placeId: place.id, status: 'inactive' }
+                    })
+                }
+            }
+        }
 
         revalidatePath('/content-admin/places')
         revalidatePath('/places')

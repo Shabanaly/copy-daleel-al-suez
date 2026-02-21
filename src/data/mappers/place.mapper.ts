@@ -29,7 +29,6 @@ export class PlaceMapper {
 
             // Media
             images: row.images || [],
-            videoUrl: row.video_url || undefined,
 
             // Social
             socialLinks: row.social_links || undefined,

@@ -4,7 +4,7 @@ export interface BusinessClaim {
     userId: string;
     fullName: string;
     phone: string;
-    businessRole: 'owner' | 'manager' | 'employee' | 'marketing';
+    businessRole: 'owner';
     proofImageUrl?: string;
     additionalNotes?: string;
     status: 'pending' | 'approved' | 'rejected';

@@ -70,7 +70,7 @@ export function BusinessClaimsList({ pendingClaims }: Props) {
                         <div className="grid grid-cols-2 gap-4 text-xs">
                             <div className="bg-muted/50 p-3 rounded-xl border border-border/50">
                                 <span className="text-muted-foreground block mb-1">الصفة الوظيفية</span>
-                                <span className="font-bold">{claim.businessRole}</span>
+                                <span className="font-bold">المالك</span>
                             </div>
                             <div className="bg-muted/50 p-3 rounded-xl border border-border/50">
                                 <span className="text-muted-foreground block mb-1">رقم الهاتف</span>

@@ -107,7 +107,7 @@ export function ProfileContent() {
         { id: 'reviews', label: 'التقييمات', icon: Star, component: <UserReviewsSection /> },
         { id: 'favorites', label: 'المفضلة', icon: Heart, component: <UserFavoritesSection /> },
         { id: 'marketplace', label: 'إعلاناتي', icon: PlusCircle, component: <UserMarketplaceSection userId={user.id} /> },
-        { id: 'business', label: 'أعمالي', icon: Building2, component: <UserBusinessSection /> },
+        { id: 'business', label: 'إدارة الأنشطة', icon: Building2, component: <UserBusinessSection /> },
         { id: 'notifications', label: 'التنبيهات', icon: Bell, component: <UserNotificationsSection /> },
     ]
 

@@ -3,8 +3,7 @@
 import { useEffect, useState } from 'react'
 import { getSellerItemsAction, deleteItemAction, markItemAsSoldAction, markItemAsActiveAction } from '@/actions/marketplace.actions'
 import { MarketplaceItem } from '@/domain/entities/marketplace-item'
-import { MarketplaceItemCard } from '@/app/(public)/marketplace/components/marketplace-item-card'
-import { PlusCircle, Loader2, Store, Edit3, Trash2, CheckCircle, RefreshCcw } from 'lucide-react'
+import { PlusCircle, Loader2, Store, Edit3, Trash2, CheckCircle, RefreshCcw, MapPin, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
@@ -86,78 +85,91 @@ export function UserMarketplaceSection({ userId }: UserMarketplaceSectionProps) 
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center px-1">
                 <h3 className="text-lg font-bold flex items-center gap-2">
                     <Store size={20} className="text-primary" />
-                    إعلاناتي المعروضة ({items.length})
+                    إدارة إعلاناتي ({items.length})
                 </h3>
                 <Link href="/marketplace/new" className="text-sm text-primary font-bold hover:underline flex items-center gap-1">
                     <PlusCircle size={16} />
-                    إضافة جديد
+                    إضافة إعلان
                 </Link>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 gap-3">
                 {items.map((item, index) => (
                     <motion.div
                         key={item.id}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.05 }}
-                        className="group relative"
+                        className="bg-card border border-border rounded-xl p-3 shadow-sm hover:shadow-md transition-all group relative overflow-hidden"
                     >
-                        <MarketplaceItemCard
-                            item={item}
-                            footerActions={
-                                <div className="flex items-center justify-between gap-2 pt-1">
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={() => router.push(`/marketplace/edit/${item.id}`)}
-                                            className="p-2 bg-muted hover:bg-accent rounded-lg transition-colors text-muted-foreground hover:text-primary"
-                                            title="تعديل"
-                                        >
-                                            <Edit3 size={16} />
-                                        </button>
-                                        <button
-                                            onClick={() => handleDelete(item.id)}
-                                            className="p-2 bg-muted hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors text-muted-foreground hover:text-red-500"
-                                            title="حذف"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
+                        <div className="flex items-center gap-4">
+                            {/* Thumbnail */}
+                            <div className="w-16 h-16 rounded-lg bg-muted overflow-hidden relative border border-border shrink-0">
+                                {item.images?.[0] ? (
+                                    <img src={item.images[0]} alt={item.title} className="w-full h-full object-cover" />
+                                ) : (
+                                    <Store size={20} className="absolute inset-0 m-auto text-muted-foreground opacity-50" />
+                                )}
+                                {item.status !== 'active' && (
+                                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                                        <span className="text-[8px] font-bold text-white px-1 py-0.5 bg-indigo-500 rounded">مباع</span>
                                     </div>
+                                )}
+                            </div>
 
+                            {/* Content */}
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-0.5">
+                                    <h4 className="font-bold text-foreground text-sm truncate">{item.title}</h4>
+                                    <span className="text-[11px] font-bold text-primary whitespace-nowrap">{item.price.toLocaleString()} ج.م</span>
+                                </div>
+                                <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                    <MapPin size={10} />
+                                    {item.area_name || item.district_name || 'السويس'}
+                                </p>
+
+                                {/* Status Toggle for Mobile/Tablet */}
+                                <div className="mt-2 flex items-center gap-2">
                                     <button
                                         onClick={() => toggleStatus(item)}
-                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${item.status === 'active'
-                                                ? 'bg-green-500/10 text-green-600 hover:bg-green-500/20'
-                                                : 'bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500/20'
+                                        className={`flex items-center gap-1 px-2 py-1 rounded-md text-[9px] font-bold transition-all ${item.status === 'active'
+                                            ? 'bg-green-500/10 text-green-600 hover:bg-green-500/20'
+                                            : 'bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500/20'
                                             }`}
                                     >
-                                        {item.status === 'active' ? (
-                                            <>
-                                                <CheckCircle size={14} />
-                                                تم البيع؟
-                                            </>
-                                        ) : (
-                                            <>
-                                                <RefreshCcw size={14} />
-                                                إعادة تنشيط
-                                            </>
-                                        )}
+                                        {item.status === 'active' ? 'تحديد كمباع' : 'إعادة تنشيط'}
                                     </button>
                                 </div>
-                            }
-                        />
-                        {/* Status Overlay for non-active items */}
-                        {item.status !== 'active' && (
-                            <div className="absolute top-2 inset-x-2 z-20">
-                                <span className={`px-2 py-1 rounded text-[10px] font-bold shadow-sm ${item.status === 'sold' ? 'bg-indigo-500 text-white' : 'bg-slate-500 text-white'
-                                    }`}>
-                                    {item.status === 'sold' ? 'مباع' : 'غير نشط'}
-                                </span>
                             </div>
-                        )}
+
+                            {/* Actions */}
+                            <div className="flex items-center gap-1.5 self-center">
+                                <Link
+                                    href={`/marketplace/edit/${item.id}`}
+                                    className="p-2 bg-muted hover:bg-accent rounded-lg transition-colors text-muted-foreground hover:text-primary"
+                                    title="تعديل"
+                                >
+                                    <Edit3 size={16} />
+                                </Link>
+                                <button
+                                    onClick={() => handleDelete(item.id)}
+                                    className="p-2 bg-muted hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors text-muted-foreground hover:text-red-500"
+                                    title="حذف"
+                                >
+                                    <Trash2 size={16} />
+                                </button>
+                                <Link
+                                    href={`/marketplace/${item.slug || item.id}`}
+                                    className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+                                    title="عرض"
+                                >
+                                    <ChevronRight size={18} />
+                                </Link>
+                            </div>
+                        </div>
                     </motion.div>
                 ))}
             </div>

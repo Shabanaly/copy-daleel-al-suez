@@ -211,7 +211,7 @@ export async function adminDeleteItemAction(itemId: string): Promise<{ success: 
         // حذف الصور من Storage أولاً
         const { data: item } = await supabase
             .from('marketplace_items')
-            .select('images, seller_id')
+            .select('title, images, seller_id')
             .eq('id', itemId)
             .single()
 
@@ -235,24 +235,14 @@ export async function adminDeleteItemAction(itemId: string): Promise<{ success: 
 
         if (error) throw error
 
-        // Send notification (item.seller_id and item.title might be needed, but item is deleted now so we rely on what we fetched before)
-        // Oops, we fetched images and seller_id before delete in 'item'. Let's fetch title too.
-        // But wait, the previous fetch at line 223 only selected images and seller_id. We need title.
-        // Let's rely on the previous fetch, but update it below in this tool call or assume previous fetch is updated?
-        // Actually, let's update the fetch query in the same multi_replace if possible, or just update logic here.
-        // It is safer to update the fetch query above. But I can't look back easily. 
-        // Let's just use a generic message if title is missing, OR better, let's update the fetch query in another chunk.
-
-        // Notification logic
+        // إرسال إشعار للمستخدم
         if (item && item.seller_id) {
-            // Since we didn't fetch title, we use a generic message or try to fetch title. 
-            // Note: Item is deleted now.
             await createNotificationAction({
                 userId: item.seller_id,
-                title: 'تم حذف إعلانك بواسطة المشرف ⚠️',
-                message: `قام أحد المشرفين بحذف إعلانك لانتهاكه شروط الاستخدام.`,
+                title: 'تنبيه: تم حذف إعلانك ⚠️',
+                message: `قام أحد المشرفين بحذف إعلانك "${item.title || 'غير معروف'}" لانتهاكه شروط الاستخدام.`,
                 type: 'system_alert',
-                data: { itemId } // No url as it is deleted
+                data: { itemId }
             })
         }
 

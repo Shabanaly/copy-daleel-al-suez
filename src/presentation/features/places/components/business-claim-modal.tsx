@@ -111,23 +111,6 @@ export function BusinessClaimModal({ isOpen, onClose, placeId, placeName }: Busi
                             />
                         </div>
 
-                        {/* Business Role */}
-                        <div className="space-y-1.5">
-                            <label className="text-sm font-bold flex items-center gap-2">
-                                <Briefcase size={16} className="text-primary" />
-                                صفتك في المكان
-                            </label>
-                            <select
-                                value={formData.businessRole}
-                                onChange={(e) => setFormData({ ...formData, businessRole: e.target.value })}
-                                className="w-full bg-muted/30 border border-border rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-                            >
-                                <option value="owner">المالك</option>
-                                <option value="manager">المدير</option>
-                                <option value="marketing">مسؤول التسويق</option>
-                                <option value="employee">موظف مفوض</option>
-                            </select>
-                        </div>
 
                         {/* Notes */}
                         <div className="space-y-1.5">

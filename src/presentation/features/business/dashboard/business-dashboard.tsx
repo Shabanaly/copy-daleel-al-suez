@@ -26,7 +26,6 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import { FlashDealsManager } from "./flash-deals-manager";
-import { QueueManager } from "./queue-manager";
 
 interface BusinessDashboardProps {
     placeId: string
@@ -35,7 +34,7 @@ interface BusinessDashboardProps {
 export function BusinessDashboard({ placeId }: BusinessDashboardProps) {
     const [place, setPlace] = useState<Place | null>(null)
     const [loading, setLoading] = useState(true)
-    const [activeSection, setActiveSection] = useState<'overview' | 'deals' | 'queue'>('overview')
+    const [activeSection, setActiveSection] = useState<'overview' | 'deals'>('overview')
 
     useEffect(() => {
         const loadData = async () => {
@@ -104,7 +103,6 @@ export function BusinessDashboard({ placeId }: BusinessDashboardProps) {
                                 { label: 'مشاهدات المكان', value: place.viewCount, icon: Eye },
                                 { label: 'متوسط التقييم', value: (place.rating || 0).toFixed(1), icon: Star },
                                 { label: 'إجمالي التعليقات', value: place.reviewCount, icon: MessageSquare },
-                                { label: 'طلبات الانضمام للدور', value: 0, icon: Users },
                             ].map((stat, i) => (
                                 <motion.div
                                     key={stat.label}
@@ -153,22 +151,6 @@ export function BusinessDashboard({ placeId }: BusinessDashboardProps) {
                                             </button>
                                         </div>
 
-                                        <div className="p-4 rounded-2xl border border-border bg-muted/20 hover:border-primary/30 transition-all group">
-                                            <div className="flex items-start justify-between mb-3">
-                                                <div className="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center">
-                                                    <Users size={24} />
-                                                </div>
-                                                <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-blue-500/10 text-blue-600">بيتا</span>
-                                            </div>
-                                            <h4 className="font-bold text-foreground mb-1">نظام حجز الدور</h4>
-                                            <p className="text-xs text-muted-foreground mb-4">نظم انتظار الزبائن وقم بالنداء عليهم بضغطة زر. وفر وقتك ووقتهم.</p>
-                                            <button
-                                                onClick={() => setActiveSection('queue')}
-                                                className="w-full py-2 bg-blue-500 text-white rounded-lg text-sm font-bold hover:bg-blue-600 transition-colors"
-                                            >
-                                                لوحة النداء
-                                            </button>
-                                        </div>
                                     </div>
                                 </section>
 
@@ -248,7 +230,7 @@ export function BusinessDashboard({ placeId }: BusinessDashboardProps) {
                             </div>
                         </div>
                     </>
-                ) : activeSection === 'deals' ? (
+                ) : (
                     <div className="bg-card border border-border rounded-3xl p-6 md:p-8 shadow-sm">
                         <div className="flex items-center gap-4 mb-8">
                             <button
@@ -260,19 +242,6 @@ export function BusinessDashboard({ placeId }: BusinessDashboardProps) {
                             <h2 className="text-2xl font-bold">إدارة العروض اللحظية</h2>
                         </div>
                         <FlashDealsManager placeId={placeId} />
-                    </div>
-                ) : (
-                    <div className="bg-card border border-border rounded-3xl p-6 md:p-8 shadow-sm">
-                        <div className="flex items-center gap-4 mb-8">
-                            <button
-                                onClick={() => setActiveSection('overview')}
-                                className="p-2 hover:bg-muted rounded-full transition-colors"
-                            >
-                                <ArrowRight size={20} />
-                            </button>
-                            <h2 className="text-2xl font-bold">إدارة قائمة الحجز</h2>
-                        </div>
-                        <QueueManager placeId={placeId} />
                     </div>
                 )}
             </main>

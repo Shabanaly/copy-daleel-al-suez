@@ -7,13 +7,14 @@ import { createPlaceAction, updatePlaceAction, PlaceState } from '@/actions/plac
 import { createAreaAction } from '@/actions/area.actions'
 import { translateAndSlugify } from '@/app/actions/translate'
 import { useDebounce } from 'use-debounce'
-import { Loader2, Store, User, MapPin, Globe, Phone, Facebook, Instagram, Youtube, Bike, Plus, Check } from 'lucide-react'
+import { Loader2, Store, User, MapPin, Globe, Phone, Facebook, Instagram, Youtube, Bike, Plus, Check, X, Shield } from 'lucide-react'
 import SupabaseImageUpload from '@/presentation/components/ui/supabase-image-upload'
 import { uploadImageAction } from '@/app/actions/upload-image-action'
 import { Place } from '@/domain/entities/place'
 import { Area } from '@/domain/entities/area'
 import { District } from '@/domain/entities/district'
 import { getDistrictsAction } from '@/actions/district.actions'
+import { cn } from '@/lib/utils'
 import { createPlaceSchema } from '@/domain/schemas/place.schema'
 
 // Types
@@ -61,21 +62,47 @@ export default function AddPlaceForm({ categories, areas, initialPlace }: AddPla
     const [talabatUrl, setTalabatUrl] = useState(initialPlace?.talabatUrl || '')
     const [glovoUrl, setGlovoUrl] = useState(initialPlace?.glovoUrl || '')
 
-    // Social Links State
-    const [socialLinks, setSocialLinks] = useState<Record<string, any>>(initialPlace?.socialLinks || {
-        facebook: '',
-        instagram: '',
+    const [socialLinks, setSocialLinks] = useState<Record<string, any>>(initialPlace?.socialLinks || {})
+
+    // Dynamic Links State
+    const [links, setLinks] = useState<string[]>(() => {
+        const initialLinks: string[] = []
+        if (initialPlace?.website) initialLinks.push(initialPlace.website)
+        if (initialPlace?.socialLinks) {
+            Object.values(initialPlace.socialLinks).forEach(v => {
+                if (v) initialLinks.push(v)
+            })
+        }
+        return initialLinks.length > 0 ? initialLinks : ['']
     })
-    const [videoUrl, setVideoUrl] = useState(initialPlace?.videoUrl || '')
     const [selectedFiles, setSelectedFiles] = useState<File[]>([])
     const [isUploadingImages, setIsUploadingImages] = useState(false)
 
-    const [debouncedName] = useDebounce(name, 1000)
     const [isGeneratingSlug, setIsGeneratingSlug] = useState(false)
 
     // --- Actions ---
     const handleSubmit = async (prevState: PlaceState, formData: FormData): Promise<PlaceState> => {
         const rawData = Object.fromEntries(formData.entries()) as Record<string, unknown>
+
+        // 0. Process Dynamic Links
+        const processedLinks = links.filter(l => l.trim() !== '')
+        let finalWebsite: string | undefined = undefined
+        const finalSocialLinks: Record<string, string> = {}
+
+        processedLinks.forEach(url => {
+            const lowUrl = url.toLowerCase()
+            if (lowUrl.includes('facebook.com') || lowUrl.includes('fb.com')) {
+                finalSocialLinks.facebook = url
+            } else if (lowUrl.includes('instagram.com')) {
+                finalSocialLinks.instagram = url
+            } else if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) {
+                finalSocialLinks.youtube = url
+            } else if (lowUrl.includes('tiktok.com')) {
+                finalSocialLinks.tiktok = url
+            } else if (!finalWebsite) {
+                finalWebsite = url // First non-social link is the website
+            }
+        })
 
         // 1. Construct preliminary payload for client-side validation
         const prePayload = {
@@ -86,12 +113,9 @@ export default function AddPlaceForm({ categories, areas, initialPlace }: AddPla
             description: description.trim() || undefined,
             phone: phone.trim(),
             whatsapp: whatsapp.trim() || undefined,
-            website: website.trim() || undefined,
+            website: finalWebsite,
             googleMapsUrl: googleMapsUrl.trim() || undefined,
-            socialLinks: Object.fromEntries(
-                Object.entries(socialLinks).filter(([_, v]) => v && v.trim() !== '')
-            ),
-            videoUrl: videoUrl.trim() || undefined,
+            socialLinks: finalSocialLinks,
             type,
             opensAt: opensAt || null,
             closesAt: closesAt || null,
@@ -104,7 +128,15 @@ export default function AddPlaceForm({ categories, areas, initialPlace }: AddPla
         }
 
         // 2. Client-side validation check BEFORE upload
-        const validation = createPlaceSchema.safeParse(prePayload)
+        // We use a dummy URL if images are present locally to pass Zod's .url() check
+        const validationPayload = {
+            ...prePayload,
+            images: (selectedFiles.length > 0 || images.length > 0)
+                ? [(images[0]?.startsWith('http') ? images[0] : "https://dummy.com/image.webp")]
+                : []
+        }
+
+        const validation = createPlaceSchema.safeParse(validationPayload)
         if (!validation.success) {
             const errors: Record<string, string[]> = {}
             validation.error.issues.forEach((issue) => {
@@ -137,6 +169,10 @@ export default function AddPlaceForm({ categories, areas, initialPlace }: AddPla
             setIsUploadingImages(false)
         }
 
+        if (finalImageUrls.length === 0) {
+            return { message: "يرجى إضافة صورة واحدة على الأقل للمكان", success: false }
+        }
+
         const payload: Partial<Place> = {
             ...rawData,
             name: name.trim(),
@@ -145,13 +181,10 @@ export default function AddPlaceForm({ categories, areas, initialPlace }: AddPla
             description: description.trim() || undefined,
             phone: phone.trim(),
             whatsapp: whatsapp.trim() || undefined,
-            website: website.trim() || undefined,
+            website: finalWebsite,
             googleMapsUrl: googleMapsUrl.trim() || undefined,
             images: finalImageUrls,
-            socialLinks: Object.fromEntries(
-                Object.entries(socialLinks).filter(([_, v]) => v && v.trim() !== '')
-            ),
-            videoUrl: videoUrl.trim() || undefined,
+            socialLinks: finalSocialLinks,
             type,
             opensAt: opensAt || null,
             closesAt: closesAt || null,
@@ -184,6 +217,20 @@ export default function AddPlaceForm({ categories, areas, initialPlace }: AddPla
         fetchDistricts();
     }, []);
 
+    const handleNameBlur = async () => {
+        if (isEditMode || slug !== '' || !name.trim()) return
+
+        setIsGeneratingSlug(true)
+        try {
+            const generatedSlug = await translateAndSlugify(name)
+            if (generatedSlug) setSlug(generatedSlug)
+        } catch (error) {
+            console.error('Failed to generate automatic slug:', error)
+        } finally {
+            setIsGeneratingSlug(false)
+        }
+    }
+
     useEffect(() => {
         if (state.success) {
             toast.success(isEditMode ? 'تم تحديث البيانات بنجاح!' : 'تم إرسال طلبك بنجاح! سيتم مراجعته قريباً.')
@@ -204,7 +251,6 @@ export default function AddPlaceForm({ categories, areas, initialPlace }: AddPla
         if (!newAreaName.trim()) return
         setIsCreatingArea(true)
         try {
-            const { translateAndSlugify } = await import('@/app/actions/translate')
             const slug = await translateAndSlugify(newAreaName)
 
             if (!newAreaDistrictId) {
@@ -245,6 +291,15 @@ export default function AddPlaceForm({ categories, areas, initialPlace }: AddPla
             return
         }
         window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`, '_blank')
+    }
+
+    const getLinkInfo = (url: string) => {
+        const lowUrl = url.toLowerCase()
+        if (lowUrl.includes('facebook.com') || lowUrl.includes('fb.com')) return { icon: Facebook, color: 'text-blue-500', label: 'فيسبوك' }
+        if (lowUrl.includes('instagram.com')) return { icon: Instagram, color: 'text-pink-500', label: 'انستجرام' }
+        if (lowUrl.includes('youtube.com') || lowUrl.includes('youtu.be')) return { icon: Youtube, color: 'text-red-500', label: 'يوتيوب' }
+        if (lowUrl.includes('tiktok.com')) return { icon: Shield, color: 'text-foreground', label: 'تيك توك' }
+        return { icon: Globe, color: 'text-muted-foreground', label: 'الموقع الإلكتروني / رابط آخر' }
     }
 
 
@@ -295,6 +350,7 @@ export default function AddPlaceForm({ categories, areas, initialPlace }: AddPla
                                 name="name"
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
+                                onBlur={handleNameBlur}
                                 required
                                 className="w-full px-4 py-3 bg-background border border-border rounded-xl text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors placeholder:text-muted-foreground/50"
                                 placeholder={type === 'business' ? "مثال: مطعم اسماك السويس" : "مثال: ورشة الأسطى محمد"}
@@ -602,65 +658,60 @@ export default function AddPlaceForm({ categories, areas, initialPlace }: AddPla
                             </div>
                         </div>
 
-                        {/* Social Links */}
+                        {/* Dynamic Links */}
                         <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-muted-foreground mb-2">فيسبوك</label>
-                                <div className="relative">
-                                    <Facebook className="absolute right-3 top-3.5 text-blue-500 w-5 h-5" />
-                                    <input
-                                        type="url"
-                                        value={socialLinks.facebook || ''}
-                                        onChange={e => setSocialLinks({ ...socialLinks, facebook: e.target.value })}
-                                        className="w-full pr-10 pl-4 py-3 bg-background border border-border rounded-xl text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors ltr:text-left placeholder:text-muted-foreground/50"
-                                        placeholder="https://facebook.com/..."
-                                    />
-                                </div>
+                            <h3 className="font-bold text-lg text-foreground flex items-center justify-between">
+                                <span className="flex items-center gap-2">
+                                    <Plus size={18} className="text-primary" />
+                                    الروابط (فيسبوك، موقع، الخ...)
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={() => setLinks([...links, ''])}
+                                    className="text-xs bg-primary/10 text-primary px-3 py-1 rounded-full hover:bg-primary/20 transition-colors"
+                                >
+                                    + إضافة رابط آخر
+                                </button>
+                            </h3>
+
+                            <p className="text-xs text-muted-foreground bg-muted/50 p-3 rounded-lg border border-border/50">
+                                💡 ضع رابط صفحة الفيسبوك أو انستجرام أو موقعك الإلكتروني، وسنتعرف عليهم تلقائياً.
+                            </p>
+
+                            <div className="space-y-3">
+                                {links.map((link, idx) => {
+                                    const { icon: Icon, color, label } = getLinkInfo(link)
+                                    return (
+                                        <div key={idx} className="flex gap-2 animate-in fade-in slide-in-from-top-1">
+                                            <div className="relative flex-1">
+                                                <Icon className={cn("absolute right-3 top-3.5 w-5 h-5", color)} />
+                                                <input
+                                                    type="url"
+                                                    value={link}
+                                                    onChange={e => {
+                                                        const newLinks = [...links]
+                                                        newLinks[idx] = e.target.value
+                                                        setLinks(newLinks)
+                                                    }}
+                                                    className="w-full pr-10 pl-4 py-3 bg-background border border-border rounded-xl text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors ltr:text-left text-sm"
+                                                    placeholder={label}
+                                                />
+                                            </div>
+                                            {links.length > 1 && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setLinks(links.filter((_, i) => i !== idx))}
+                                                    className="p-3 text-red-500 hover:bg-red-500/10 rounded-xl transition-colors shrink-0"
+                                                >
+                                                    <X size={20} />
+                                                </button>
+                                            )}
+                                        </div>
+                                    )
+                                })}
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-muted-foreground mb-2">انستجرام</label>
-                                <div className="relative">
-                                    <Instagram className="absolute right-3 top-3.5 text-pink-500 w-5 h-5" />
-                                    <input
-                                        type="url"
-                                        value={socialLinks.instagram || ''}
-                                        onChange={e => setSocialLinks({ ...socialLinks, instagram: e.target.value })}
-                                        className="w-full pr-10 pl-4 py-3 bg-background border border-border rounded-xl text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors ltr:text-left placeholder:text-muted-foreground/50"
-                                        placeholder="https://instagram.com/..."
-                                    />
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-muted-foreground mb-2">الموقع الإلكتروني</label>
-                                <div className="relative">
-                                    <Globe className="absolute right-3 top-3.5 text-muted-foreground w-5 h-5" />
-                                    <input
-                                        type="url"
-                                        name="website"
-                                        value={website}
-                                        onChange={(e) => setWebsite(e.target.value)}
-                                        className="w-full pr-10 pl-4 py-3 bg-background border border-border rounded-xl text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors ltr:text-left placeholder:text-muted-foreground/50"
-                                        placeholder="https://example.com"
-                                    />
-                                </div>
-                                {state.errors?.website && <p className="text-red-500 text-xs mt-1 font-medium">{state.errors.website[0]}</p>}
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-muted-foreground mb-2">رابط فيديو (يوتيوب / تيك توك ...)</label>
-                                <div className="relative">
-                                    <Youtube className="absolute right-3 top-3.5 text-red-500 w-5 h-5" />
-                                    <input
-                                        type="url"
-                                        value={videoUrl}
-                                        onChange={e => setVideoUrl(e.target.value)}
-                                        className="w-full pr-10 pl-4 py-3 bg-background border border-border rounded-xl text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors ltr:text-left placeholder:text-muted-foreground/50"
-                                        placeholder="https://www.youtube.com/watch?v=..."
-                                    />
-                                </div>
-                                {state.errors?.videoUrl && <p className="text-red-500 text-xs mt-1 font-medium">{state.errors.videoUrl[0]}</p>}
-                            </div>
+
                         </div>
-                        {state.errors?.socialLinks && <p className="text-red-500 text-xs font-medium">يوجد خطأ في روابط التواصل الاجتماعي</p>}
                     </div>
                 </div>
 

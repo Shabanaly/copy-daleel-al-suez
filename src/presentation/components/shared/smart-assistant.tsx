@@ -69,7 +69,7 @@ export function SmartAssistant() {
         // 4. Discovery Mode (Fallback for new users)
         if (profile.visitCount < 3 || Object.keys(profile.interests).length === 0) {
             const options = [
-                { text: 'أهلاً بك في دليل السويس! تحب تشوف الأماكن الأكثر رواقاً النهاردة؟', label: 'شوف الرائج', href: '/places/trending' },
+                { text: 'أهلاً بك في دليل السويس! تحب تشوف الأماكن الأكثر رواجا النهادر؟', label: 'شوف الرائج', href: '/places?sort=trending' },
                 { text: 'لسه جديد هنا؟ استكشف أقسام الدليل وشوف كل اللي السويس بتقدمه.', label: 'استكشف الدليل', href: '/categories' },
                 { text: 'بدل الحيرة.. شوف أحدث الأماكن اللي انضمت لينا النهاردة!', label: 'شوف الجديد', href: '/places?sort=newest' }
             ];
@@ -79,18 +79,6 @@ export function SmartAssistant() {
                 text: random.text,
                 actionLabel: random.label,
                 actionHref: random.href,
-                type: 'greeting',
-                isHighPriority: false
-            };
-        }
-
-        // 5. Random "Try Something New" for idle users
-        if (Math.random() > 0.7) {
-            return {
-                id: 'random_discovery',
-                text: 'ما تيجي نجرب حاجة جديدة؟ استكشف أماكن عشوائية ممكن تعجبك!',
-                actionLabel: 'جرب حظك',
-                actionHref: '/places/random',
                 type: 'greeting',
                 isHighPriority: false
             };

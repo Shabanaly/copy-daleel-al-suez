@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight, MapPin, Star, Clock, Tag, Youtube, Eye } from "lucide-react";
+import { ArrowRight, MapPin, Star, Clock, Tag, Eye, LayoutDashboard } from "lucide-react";
 import { ViewTracker } from "@/presentation/components/shared/view-tracker";
 import { Place } from "@/domain/entities/place";
 import { Review, ReviewStats } from "@/domain/entities/review";
@@ -11,7 +11,6 @@ import { PlaceActionButtons } from "@/presentation/features/places/components/pl
 import { GoogleMapEmbed } from "@/presentation/features/places/components/google-map-embed";
 import { PlaceCard } from "@/presentation/features/places/components/place-card";
 import { ReviewsSectionWrapper } from "@/presentation/features/reviews/components/reviews-section-wrapper";
-import { VideoEmbed } from "@/presentation/components/shared/video-embed";
 import { useSpyOnPlace } from "@/lib/user-spy/use-spy-on";
 
 import { DeliveryOptions } from "@/presentation/features/places/components/delivery-options";
@@ -108,6 +107,15 @@ export function PlaceDetailsView({
                                         <Badge className="shadow-lg backdrop-blur-md bg-blue-500/90 border-0 text-white px-3 py-1 text-xs font-bold">
                                             <span className="mr-1 text-[10px]">✓</span> موثق
                                         </Badge>
+                                    )}
+                                    {currentUserId === place.ownerId && (
+                                        <Link
+                                            href={`/business/dashboard/${place.id}`}
+                                            className="bg-orange-500 hover:bg-orange-600 text-white font-bold px-4 py-1.5 rounded-full text-xs shadow-lg flex items-center gap-1.5 transition-all hover:scale-105"
+                                        >
+                                            <LayoutDashboard size={14} />
+                                            إدارة المكان
+                                        </Link>
                                     )}
                                 </div>
 
@@ -221,16 +229,6 @@ export function PlaceDetailsView({
                             </div>
                         </div>
 
-                        {/* Video Section (Full Width in column) */}
-                        {place.videoUrl && (
-                            <div className="bg-card rounded-2xl p-6 shadow-sm border border-border">
-                                <h2 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
-                                    <Youtube className="text-red-600" size={24} />
-                                    عرض فيديو
-                                </h2>
-                                <VideoEmbed url={place.videoUrl} />
-                            </div>
-                        )}
 
                         {/* Map Card - Moved here for better width */}
                         <div className="bg-card rounded-2xl p-6 shadow-sm border border-border">

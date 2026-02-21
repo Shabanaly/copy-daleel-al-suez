@@ -16,6 +16,9 @@ export class SubmitBusinessClaimUseCase {
             throw new Error("يوجد طلب توثيق قيد المراجعة لهذا المكان بالفعل");
         }
 
-        return await this.businessClaimRepository.submitClaim(userId, data);
+        return await this.businessClaimRepository.submitClaim(userId, {
+            ...data,
+            businessRole: 'owner'
+        });
     }
 }

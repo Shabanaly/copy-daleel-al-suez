@@ -10,8 +10,9 @@ DECLARE
     notification_title text;
     notification_message text;
 BEGIN
-    -- Only act on status changes
-    IF (OLD.status IS NULL OR OLD.status != NEW.status) THEN
+    -- Only act on status changes FROM 'pending'
+    -- This ensures user-toggles (e.g. sold -> active) don't trigger "Approved" notifications
+    IF (OLD.status = 'pending' AND OLD.status != NEW.status) THEN
         
         IF NEW.status = 'active' THEN
             notification_title := 'تم قبول إعلانك 🎉';

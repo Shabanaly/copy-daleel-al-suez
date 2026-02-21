@@ -162,6 +162,7 @@ export class SupabasePlaceRepository implements IPlaceRepository {
 
             is_featured: place.isFeatured || false,
             created_by: userId,
+            owner_id: userId,
             google_place_id: place.googlePlaceId
         };
 

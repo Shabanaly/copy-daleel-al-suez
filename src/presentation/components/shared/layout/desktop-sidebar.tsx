@@ -10,6 +10,7 @@ import {
     Calendar,
     MapPin,
     Clock,
+    Plus,
     PlusCircle,
     LayoutGrid,
     Newspaper,
@@ -19,7 +20,12 @@ import {
     Settings,
     UserCircle,
     AlertTriangle,
-    Shield
+    Shield,
+    MessageSquare,
+    Store,
+    Info,
+    PhoneCall,
+    Search
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
@@ -34,7 +40,7 @@ interface SidebarItemProps {
     subItems?: { label: string, href: string, icon?: any }[]
 }
 
-function SidebarItem({ icon: Icon, label, href, active, isExpanded, badge, subItems }: SidebarItemProps) {
+function SidebarItem({ icon: Icon, label, href, active, isExpanded, badge }: SidebarItemProps) {
     return (
         <div className="space-y-1">
             <Link href={href} className="block group font-bold">
@@ -71,29 +77,6 @@ function SidebarItem({ icon: Icon, label, href, active, isExpanded, badge, subIt
                     )}
                 </div>
             </Link>
-
-            {/* Sub Items - Only if expanded and parent is active */}
-            <AnimatePresence>
-                {isExpanded && active && subItems && (
-                    <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="overflow-hidden flex flex-col pr-8 space-y-1"
-                    >
-                        {subItems.map((sub, idx) => (
-                            <Link
-                                key={idx}
-                                href={sub.href}
-                                className="text-[13px] py-2 text-muted-foreground hover:text-primary transition-colors flex items-center gap-2.5 group/sub"
-                            >
-                                <div className="w-1.5 h-1.5 rounded-full bg-border group-hover/sub:bg-primary transition-colors shrink-0" />
-                                {sub.label}
-                            </Link>
-                        ))}
-                    </motion.div>
-                )}
-            </AnimatePresence>
         </div>
     )
 }
@@ -122,54 +105,50 @@ export function DesktopSidebar() {
         checkAdmin()
     }, [])
 
-    const marketplaceSubItems = [
-        { label: 'أضف إعلان', href: '/marketplace/new' },
-        { label: 'إعلاناتي', href: '/marketplace/my-items' },
-    ]
-
-    const mainNav = [
+    const navGroups = [
         {
-            icon: Home,
-            label: 'الرئيسية',
-            href: '/',
-            subItems: [
-                { label: 'تصفح التصنيفات', href: '/categories' },
-                { label: 'أضف مكان جديد', href: '/places/new' },
-                { label: 'الخريطة التفاعلية', href: '/map' },
+            title: 'دليل المدينة',
+            items: [
+                { icon: Home, label: 'الرئيسية', href: '/' },
+                { icon: LayoutGrid, label: 'تصفح الأقسام', href: '/categories' },
+                { icon: MapPin, label: 'خريطة السويس', href: '/map' },
+                { icon: Plus, label: 'أضف مكان جديد', href: '/places/new' },
             ]
         },
-        ...(isAdmin ? [
-            {
-                icon: LayoutGrid,
-                label: 'إدارة المحتوى',
-                href: '/content-admin',
-                subItems: [
-                    { label: 'إدارة السوق', href: '/content-admin/marketplace' },
-                    { label: 'إشراف المجتمع', href: '/content-admin/community' },
-                    { label: 'الأخبار والفعاليات', href: '/content-admin/news' },
-                    { label: 'طلبات التوثيق', href: '/content-admin/claims' },
-                ]
-            }
-        ] : []),
         {
-            icon: ShoppingBag,
-            label: 'سوق السويس',
-            href: '/marketplace',
-            subItems: marketplaceSubItems
+            title: 'نبض السويس',
+            items: [
+                { icon: MessageSquare, label: 'المجتمع', href: '/community' },
+                { icon: Newspaper, label: 'أخبار السويس', href: '/news' },
+                { icon: Calendar, label: 'الفعاليات والأحداث', href: '/events' },
+            ]
         },
-        { icon: Calendar, label: 'الفعاليات والأحداث', href: '/events' },
-        { icon: Newspaper, label: 'أخبار السويس', href: '/news' },
-    ]
-
-    const utilityNav = [
-        { icon: AlertTriangle, label: 'دليل الطوارئ', href: '/categories/health' },
-        { icon: Clock, label: 'مواقيت الصلاة', href: '/prayer-times' },
+        {
+            title: 'سوق السويس',
+            items: [
+                { icon: ShoppingBag, label: 'سوق السويس', href: '/marketplace' },
+                { icon: Store, label: 'إعلاناتي', href: '/marketplace/my-items' },
+                { icon: PlusCircle, label: 'أضف إعلان', href: '/marketplace/new' },
+            ]
+        },
+        {
+            title: 'أدوات وخدمات',
+            items: [
+                { icon: Clock, label: 'مواقيت الصلاة', href: '/prayer-times' },
+                { icon: AlertTriangle, label: 'دليل الطوارئ', href: '/categories/health' },
+            ]
+        }
     ]
 
     const userNav = [
         { icon: Star, label: 'المفضلة', href: '/favorites' },
         { icon: UserCircle, label: 'حسابي الشخصي', href: '/profile' },
         { icon: Settings, label: 'الإعدادات', href: '/settings' },
+    ]
+
+    const moreNav = [
+        { icon: Info, label: 'عن الدليل', href: '/about' },
+        { icon: PhoneCall, label: 'اتصل بنا', href: '/contact' },
     ]
 
     return (
@@ -186,33 +165,45 @@ export function DesktopSidebar() {
                     isHovered ? "rounded-l-3xl" : "rounded-none"
                 )}
             >
-                {/* Main Navigation */}
+                {/* Main Navigation Groups */}
                 <div className="flex-1 overflow-y-auto px-1.5 py-3 space-y-4 scrollbar-hide">
-                    {/* Primary */}
-                    <div className="space-y-1">
-                        {mainNav.map((item) => {
-                            const isHome = item.href === '/'
-                            const isActive = isHome
-                                ? (pathname === '/' || pathname.startsWith('/categories') || pathname.startsWith('/places') || pathname === '/map')
-                                : (item.href !== '/' && pathname.startsWith(item.href))
+                    {navGroups.map((group, groupIdx) => (
+                        <div key={groupIdx} className="space-y-1">
+                            {isHovered && <p className="text-[9px] font-black text-muted-foreground/40 px-3 uppercase tracking-widest pb-1">{group.title}</p>}
+                            {group.items.map((item) => {
+                                const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))
+                                return (
+                                    <SidebarItem
+                                        key={item.href}
+                                        {...item}
+                                        active={isActive}
+                                        isExpanded={isHovered}
+                                    />
+                                )
+                            })}
+                        </div>
+                    ))}
 
-                            return (
-                                <SidebarItem
-                                    key={item.href}
-                                    {...item}
-                                    active={isActive}
-                                    isExpanded={isHovered}
-                                />
-                            )
-                        })}
-                    </div>
+                    {/* Admin Dashboard - Simplified Link */}
+                    {isAdmin && (
+                        <div className="space-y-1 pt-2">
+                            {isHovered && <p className="text-[9px] font-black text-primary/40 px-3 uppercase tracking-widest pb-1">الإدارة</p>}
+                            <SidebarItem
+                                icon={Shield}
+                                label="لوحة التحكم"
+                                href="/content-admin"
+                                active={pathname.startsWith('/content-admin') || pathname.startsWith('/admin')}
+                                isExpanded={isHovered}
+                            />
+                        </div>
+                    )}
 
                     <div className="h-px bg-border/40 mx-2" />
 
-                    {/* Services & Utility */}
+                    {/* Profile & More */}
                     <div className="space-y-1">
-                        {isHovered && <p className="text-[9px] font-bold text-muted-foreground/40 px-3 uppercase tracking-widest pb-1">خدمات وأدوات</p>}
-                        {utilityNav.map((item) => (
+                        {isHovered && <p className="text-[9px] font-bold text-muted-foreground/40 px-3 uppercase tracking-widest pb-1">الحساب والمزيد</p>}
+                        {userNav.map((item) => (
                             <SidebarItem
                                 key={item.href}
                                 {...item}
@@ -220,14 +211,7 @@ export function DesktopSidebar() {
                                 isExpanded={isHovered}
                             />
                         ))}
-                    </div>
-
-                    <div className="h-px bg-border/40 mx-2" />
-
-                    {/* Profile & Settings */}
-                    <div className="space-y-1">
-                        {isHovered && <p className="text-[9px] font-bold text-muted-foreground/40 px-3 uppercase tracking-widest pb-1">الحساب</p>}
-                        {userNav.map((item) => (
+                        {moreNav.map((item) => (
                             <SidebarItem
                                 key={item.href}
                                 {...item}

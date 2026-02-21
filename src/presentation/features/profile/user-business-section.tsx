@@ -30,11 +30,10 @@ export function UserBusinessSection() {
                 const { data: placesData } = await supabase
                     .from('places')
                     .select('*, categories(name), areas(name)')
-                    .eq('owner_id', user.id)
-                    .eq('status', 'active')
+                    .or(`owner_id.eq.${user.id},created_by.eq.${user.id}`)
+                    .in('status', ['active', 'pending'])
 
                 if (placesData) {
-                    // Map to Place entities (simplified for this view)
                     const mappedPlaces = placesData.map((p: any) => ({
                         id: p.id,
                         name: p.name,
@@ -43,7 +42,8 @@ export function UserBusinessSection() {
                         categoryName: p.categories?.name,
                         areaName: p.areas?.name,
                         isVerified: p.is_verified,
-                        isClaimed: p.is_claimed
+                        isClaimed: p.is_claimed,
+                        status: p.status
                     } as unknown as Place))
                     setOwnedPlaces(mappedPlaces)
                 }
@@ -60,67 +60,77 @@ export function UserBusinessSection() {
         return (
             <div className="flex flex-col items-center justify-center py-12">
                 <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
-                <p className="text-muted-foreground text-sm font-medium">جاري تحميل بيانات أعمالك...</p>
+                <p className="text-muted-foreground text-sm font-medium">جاري تحميل البيانات...</p>
             </div>
         )
     }
 
     return (
         <div className="space-y-8">
-            {/* 1. Managed Places (Dashboards) */}
+            {/* 1. Managed Places */}
             <section className="space-y-4">
-                <div className="flex items-center justify-between mb-2 px-1">
+                <div className="flex items-center justify-between mb-4 px-1">
                     <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
                         <Building2 size={20} className="text-primary" />
-                        أماكني الموثقة
+                        إدارة الأنشطة التجارية
                     </h3>
                     <Link
                         href="/places/new"
                         className="text-primary text-sm font-bold flex items-center gap-1 hover:underline"
                     >
                         <PlusCircle size={16} />
-                        إضافة مكان جديد
+                        إضافة مكان
                     </Link>
                 </div>
 
                 {ownedPlaces.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-3">
                         {ownedPlaces.map((place, index) => (
                             <motion.div
                                 key={place.id}
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: index * 0.1 }}
-                                className="bg-card border border-border rounded-2xl p-4 shadow-sm hover:shadow-md transition-all group"
+                                transition={{ delay: index * 0.05 }}
+                                className="bg-card border border-border rounded-xl p-3 shadow-sm hover:shadow-md transition-all group relative overflow-hidden"
                             >
-                                <div className="flex items-start gap-4">
-                                    <div className="w-16 h-16 rounded-xl bg-muted overflow-hidden relative border border-border">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-14 h-14 rounded-lg bg-muted overflow-hidden relative border border-border shrink-0">
                                         {place.images?.[0] ? (
                                             <img src={place.images[0]} alt={place.name} className="w-full h-full object-cover" />
                                         ) : (
-                                            <Building2 size={24} className="absolute inset-0 m-auto text-muted-foreground opacity-50" />
+                                            <Building2 size={20} className="absolute inset-0 m-auto text-muted-foreground opacity-50" />
                                         )}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <h4 className="font-bold text-foreground truncate">{place.name}</h4>
-                                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                                        <div className="flex items-center gap-2 mb-0.5">
+                                            <h4 className="font-bold text-foreground text-sm truncate">{place.name}</h4>
+                                            {place.status === 'pending' && (
+                                                <span className="text-[10px] bg-amber-500/10 text-amber-600 px-2 py-0.5 rounded-full font-bold">قيد المراجعة</span>
+                                            )}
+                                            {place.isVerified && (
+                                                <span className="text-[10px] bg-blue-500/10 text-blue-600 px-2 py-0.5 rounded-full font-bold">موثق</span>
+                                            )}
+                                        </div>
+                                        <p className="text-[11px] text-muted-foreground truncate">
                                             {place.categoryName} • {place.areaName}
                                         </p>
-                                        <div className="flex items-center gap-2 mt-3">
-                                            <Link
-                                                href={`/business/dashboard/${place.id}`}
-                                                className="bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground text-xs font-bold px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5"
-                                            >
-                                                <LayoutDashboard size={14} />
-                                                لوحة التحكم
-                                            </Link>
-                                            <Link
-                                                href={`/places/${place.slug}`}
-                                                className="text-muted-foreground hover:text-foreground text-xs font-medium px-2 py-1.5 transition-colors"
-                                            >
-                                                عرض الصفحة
-                                            </Link>
-                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Link
+                                            href={`/business/dashboard/${place.id}`}
+                                            className="h-8 w-8 md:w-auto md:px-3 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-lg transition-all flex items-center justify-center gap-1.5"
+                                            title="لوحة التحكم"
+                                        >
+                                            <LayoutDashboard size={14} />
+                                            <span className="hidden md:inline text-[11px] font-bold">الإدارة</span>
+                                        </Link>
+                                        <Link
+                                            href={`/places/${place.slug}`}
+                                            className="h-8 w-8 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+                                            title="عرض"
+                                        >
+                                            <ChevronRight size={18} />
+                                        </Link>
                                     </div>
                                 </div>
                             </motion.div>
@@ -128,8 +138,8 @@ export function UserBusinessSection() {
                     </div>
                 ) : (
                     <div className="text-center py-10 bg-muted/20 rounded-2xl border border-dashed border-border">
-                        <Building2 size={40} className="mx-auto mb-3 opacity-20" />
-                        <p className="text-sm font-medium text-muted-foreground">ليس لديك أماكن موثقة حالياً</p>
+                        <Building2 size={32} className="mx-auto mb-2 opacity-20" />
+                        <p className="text-xs font-medium text-muted-foreground">لا توجد أنشطة تجارية بعد</p>
                     </div>
                 )}
             </section>
@@ -152,8 +162,8 @@ export function UserBusinessSection() {
                             >
                                 <div className="flex items-center gap-3">
                                     <div className={`p-2 rounded-lg ${claim.status === 'pending' ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400' :
-                                            claim.status === 'approved' ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' :
-                                                'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+                                        claim.status === 'approved' ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' :
+                                            'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
                                         }`}>
                                         {claim.status === 'pending' ? <Clock size={20} /> :
                                             claim.status === 'approved' ? <ShieldCheck size={20} /> :

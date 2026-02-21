@@ -19,8 +19,7 @@ export const placeSchema = z.object({
     googleMapsUrl: z.string().url("رابط خرائط جوجل غير صحيح").optional().nullable(),
 
     // Media
-    images: z.array(z.string().url("رابط الصورة غير صحيح")).max(10, "يمكن إضافة 10 صور كحد أقصى").optional().default([]),
-    videoUrl: z.string().url("رابط الفيديو غير صحيح").optional().nullable(),
+    images: z.array(z.string().url("رابط الصورة غير صحيح")).min(1, "يرجى إضافة صورة واحدة على الأقل").max(10, "يمكن إضافة 10 صور كحد أقصى"),
 
     // Social
     socialLinks: z.record(z.string(), z.string().url("رابط غير صحيح")).optional().nullable(),

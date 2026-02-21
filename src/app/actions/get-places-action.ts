@@ -54,12 +54,16 @@ async function fetchPlacesFromDB(params: GetPlacesParams) {
 
     // Apply Sorting
     switch (sort) {
+        case 'trending':
+            query = query.order('view_count', { ascending: false })
+            break
         case 'rating':
             query = query.order('rating', { ascending: false })
             break
         case 'name':
             query = query.order('name', { ascending: true })
             break
+        case 'newest':
         default: // 'recent'
             query = query.order('created_at', { ascending: false })
     }

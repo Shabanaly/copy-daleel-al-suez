@@ -1,4 +1,12 @@
 export type NotificationType =
+    | 'general'
+    | 'system_alert'
+    | 'status_update'
+    | 'marketplace_approve'
+    | 'marketplace_reject'
+    | 'marketplace_update'
+    | 'lead_generation'
+    | 'bump_alert'
     | 'review_reply'
     | 'queue_update'
     | 'deal_alert'
@@ -12,8 +20,8 @@ export interface Notification {
     userId: string;
     type: NotificationType;
     title: string;
-    body?: string;
-    link?: string;
+    message: string;
+    data?: any;
 
     isRead: boolean;
     readAt?: string;
@@ -44,8 +52,8 @@ export interface CreateNotificationDTO {
     userId: string;
     type: NotificationType;
     title: string;
-    body?: string;
-    link?: string;
+    message: string;
+    data?: any;
 }
 
 export interface UpdatePreferencesDTO extends Partial<Omit<NotificationPreferences, 'userId' | 'createdAt' | 'updatedAt'>> { }

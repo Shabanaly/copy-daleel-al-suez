@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { X, Home, Calendar, Plus, MapPin, Clock, Star, User, Settings, LogOut, Menu, ShoppingBag, Store, LayoutGrid, Newspaper, AlertTriangle, Shield, MessageSquare, Key } from 'lucide-react'
+import { X, Home, Calendar, Plus, MapPin, Clock, Star, User, Settings, LogOut, Menu, ShoppingBag, Store, LayoutGrid, Newspaper, AlertTriangle, Shield, MessageSquare, Key, PlusCircle, Info, PhoneCall } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 
@@ -11,13 +11,39 @@ interface MobileDrawerProps {
     user: any
 }
 
-const navigationItems = [
-    { icon: Home, label: 'الرئيسية', href: '/' },
-    { icon: ShoppingBag, label: 'سوق السويس', href: '/marketplace' },
-    { icon: Calendar, label: 'الفعاليات والأحداث', href: '/events' },
-    { icon: Newspaper, label: 'أخبار السويس', href: '/news' },
-    { icon: AlertTriangle, label: 'دليل الطوارئ', href: '/categories/health' },
-    { icon: Clock, label: 'مواقيت الصلاة', href: '/prayer-times' },
+const navGroups = [
+    {
+        title: 'دليل المدينة',
+        items: [
+            { icon: Home, label: 'الرئيسية', href: '/' },
+            { icon: LayoutGrid, label: 'تصفح الأقسام', href: '/categories' },
+            { icon: MapPin, label: 'خريطة السويس', href: '/map' },
+            { icon: Plus, label: 'أضف مكان جديد', href: '/places/new' },
+        ]
+    },
+    {
+        title: 'نبض السويس',
+        items: [
+            { icon: MessageSquare, label: 'المجتمع', href: '/community' },
+            { icon: Newspaper, label: 'أخبار السويس', href: '/news' },
+            { icon: Calendar, label: 'الفعاليات والأحداث', href: '/events' },
+        ]
+    },
+    {
+        title: 'سوق السويس',
+        items: [
+            { icon: ShoppingBag, label: 'سوق السويس', href: '/marketplace' },
+            { icon: Store, label: 'إعلاناتي', href: '/marketplace/my-items' },
+            { icon: PlusCircle, label: 'أضف إعلان', href: '/marketplace/new' },
+        ]
+    },
+    {
+        title: 'أدوات وخدمات',
+        items: [
+            { icon: Clock, label: 'مواقيت الصلاة', href: '/prayer-times' },
+            { icon: AlertTriangle, label: 'دليل الطوارئ', href: '/categories/health' },
+        ]
+    }
 ]
 
 export function MobileDrawer({ user }: MobileDrawerProps) {
@@ -143,129 +169,83 @@ export function MobileDrawer({ user }: MobileDrawerProps) {
                                 </div>
                             )}
 
-                            {/* Navigation Items - Scrollable */}
-                            <nav className="flex-1 overflow-y-auto py-2 px-2.5 space-y-0.5 scrollbar-hide">
-                                {navigationItems.map((item) => {
-                                    const Icon = item.icon
-                                    const isHome = item.href === '/'
-                                    const isActive = isHome
-                                        ? (pathname === '/' || pathname.startsWith('/categories') || pathname.startsWith('/places') || pathname === '/map')
-                                        : (item.href !== '/' && pathname.startsWith(item.href))
+                            {/* Navigation Groups - Scrollable */}
+                            <nav className="flex-1 overflow-y-auto py-2 px-2.5 space-y-6 scrollbar-hide">
+                                {navGroups.map((group, groupIdx) => (
+                                    <div key={groupIdx} className="space-y-1">
+                                        <h3 className="px-3 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50 pb-1">
+                                            {group.title}
+                                        </h3>
+                                        <div className="space-y-0.5">
+                                            {group.items.map((item) => {
+                                                const Icon = item.icon
+                                                const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))
 
-                                    return (
-                                        <div key={item.href}>
-                                            <Link
-                                                href={item.href}
-                                                onClick={() => setIsOpen(false)}
-                                                className={`
-                                                flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-all duration-200 group
-                                                ${isActive
-                                                        ? 'bg-primary/10 text-primary font-bold shadow-sm ring-1 ring-primary/20'
-                                                        : 'hover:bg-accent text-foreground/70 hover:text-foreground'
-                                                    }
-                                            `}
-                                            >
-                                                <Icon size={18} className={`transition-colors ${isActive ? 'text-primary' : 'group-hover:text-primary'}`} />
-                                                <span className="font-medium text-sm">{item.label}</span>
-                                            </Link>
-
-                                            {/* Submenu for Home (Directory Hub) */}
-                                            {isHome && isActive && (
-                                                <div className="mr-6 border-r-2 border-primary/20 pr-3 mt-1.5 space-y-0.5 animate-in slide-in-from-right-2 duration-300">
+                                                return (
                                                     <Link
-                                                        href="/categories"
+                                                        key={item.href}
+                                                        href={item.href}
                                                         onClick={() => setIsOpen(false)}
-                                                        className="flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs font-medium hover:bg-accent hover:text-primary transition-colors"
-                                                    >
-                                                        <LayoutGrid size={15} />
-                                                        <span>تصفح التصنيفات</span>
-                                                    </Link>
-                                                    <Link
-                                                        href="/places/new"
-                                                        onClick={() => setIsOpen(false)}
-                                                        className="flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs font-medium hover:bg-accent hover:text-primary transition-colors"
-                                                    >
-                                                        <Plus size={15} />
-                                                        <span>أضف مكان جديد</span>
-                                                    </Link>
-                                                    <Link
-                                                        href="/map"
-                                                        onClick={() => setIsOpen(false)}
-                                                        className="flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs font-medium hover:bg-accent hover:text-primary transition-colors"
-                                                    >
-                                                        <MapPin size={15} />
-                                                        <span>الخريطة التفاعلية</span>
-                                                    </Link>
-                                                </div>
-                                            )}
-
-                                            {/* Promoted Content Admin Link for Admins (Top-level) */}
-                                            {isHome && isAdmin && (
-                                                <div className="space-y-0.5 mt-0.5">
-                                                    <Link
-                                                        href="/content-admin"
-                                                        onClick={() => setIsOpen(false)}
-                                                        className={cn(
-                                                            "flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-all duration-200 group",
-                                                            pathname === '/content-admin'
+                                                        className={`
+                                                            flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-all duration-200 group
+                                                            ${isActive
                                                                 ? 'bg-primary/10 text-primary font-bold shadow-sm ring-1 ring-primary/20'
                                                                 : 'hover:bg-accent text-foreground/70 hover:text-foreground'
-                                                        )}
+                                                            }
+                                                        `}
                                                     >
-                                                        <Shield size={18} className={cn("transition-colors", pathname === '/content-admin' ? 'text-primary' : 'group-hover:text-primary')} />
-                                                        <span className="font-medium text-sm">إدارة المحتوى (نظرة عامة)</span>
+                                                        <Icon size={18} className={`transition-colors ${isActive ? 'text-primary' : 'group-hover:text-primary'}`} />
+                                                        <span className="font-semibold text-sm">{item.label}</span>
                                                     </Link>
-                                                    <div className="mr-6 border-r-2 border-primary/20 pr-3 space-y-0.5">
-                                                        {[
-                                                            { label: 'إدارة السوق', href: '/content-admin/marketplace', icon: ShoppingBag },
-                                                            { label: 'إشراف المجتمع', href: '/content-admin/community', icon: MessageSquare },
-                                                            { label: 'الأخبار والفعاليات', href: '/content-admin/news', icon: Newspaper },
-                                                            { label: 'طلبات التوثيق', href: '/content-admin/claims', icon: Key },
-                                                        ].map((sub) => {
-                                                            const SubIcon = sub.icon;
-                                                            return (
-                                                                <Link
-                                                                    key={sub.href}
-                                                                    href={sub.href}
-                                                                    onClick={() => setIsOpen(false)}
-                                                                    className={cn(
-                                                                        "flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs font-medium transition-colors",
-                                                                        pathname === sub.href ? "bg-primary/10 text-primary" : "hover:bg-accent hover:text-primary"
-                                                                    )}
-                                                                >
-                                                                    <SubIcon size={15} />
-                                                                    <span>{sub.label}</span>
-                                                                </Link>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* Submenu for Marketplace */}
-                                            {item.href === '/marketplace' && isActive && (
-                                                <div className="mr-6 border-r-2 border-primary/20 pr-3 mt-1.5 space-y-0.5 animate-in slide-in-from-right-2 duration-300">
-                                                    <Link
-                                                        href="/marketplace/new"
-                                                        onClick={() => setIsOpen(false)}
-                                                        className="flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs font-medium hover:bg-accent hover:text-primary transition-colors"
-                                                    >
-                                                        <Plus size={15} />
-                                                        <span>أضف إعلان</span>
-                                                    </Link>
-                                                    <Link
-                                                        href="/marketplace/my-items"
-                                                        onClick={() => setIsOpen(false)}
-                                                        className="flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs font-medium hover:bg-accent hover:text-primary transition-colors"
-                                                    >
-                                                        <Store size={15} />
-                                                        <span>إعلاناتي</span>
-                                                    </Link>
-                                                </div>
-                                            )}
+                                                )
+                                            })}
                                         </div>
-                                    )
-                                })}
+                                    </div>
+                                ))}
+
+                                {/* Admin Section - Only for Admins */}
+                                {isAdmin && (
+                                    <div className="space-y-1 pt-2">
+                                        <h3 className="px-3 text-[10px] font-black uppercase tracking-[0.2em] text-primary/40 pb-1">
+                                            الإدارة
+                                        </h3>
+                                        <Link
+                                            href="/content-admin"
+                                            onClick={() => setIsOpen(false)}
+                                            className={cn(
+                                                "flex items-center gap-2.5 px-3 py-3 rounded-xl transition-all duration-200 group border-2 border-dashed border-primary/20 hover:border-primary/50 hover:bg-primary/5",
+                                                pathname.startsWith('/content-admin') || pathname.startsWith('/admin')
+                                                    ? 'bg-primary/10 text-primary font-black ring-1 ring-primary/30'
+                                                    : 'text-primary/70 hover:text-primary'
+                                            )}
+                                        >
+                                            <Shield size={18} className="animate-pulse" />
+                                            <span className="font-black text-sm uppercase">لوحة التحكم</span>
+                                        </Link>
+                                    </div>
+                                )}
+
+                                {/* Secondary Links */}
+                                <div className="space-y-1 pt-4 border-t border-border/50">
+                                    <div className="grid grid-cols-2 gap-1.5 p-1">
+                                        <Link
+                                            href="/about"
+                                            onClick={() => setIsOpen(false)}
+                                            className="flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-[11px] font-bold text-muted-foreground hover:bg-accent hover:text-primary transition-colors"
+                                        >
+                                            <Info size={14} />
+                                            <span>عن الدليل</span>
+                                        </Link>
+                                        <Link
+                                            href="/contact"
+                                            onClick={() => setIsOpen(false)}
+                                            className="flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-[11px] font-bold text-muted-foreground hover:bg-accent hover:text-primary transition-colors"
+                                        >
+                                            <PhoneCall size={14} />
+                                            <span>اتصل بنا</span>
+                                        </Link>
+                                    </div>
+                                </div>
                             </nav>
 
                             {/* Bottom Section - Fixed at bottom */}

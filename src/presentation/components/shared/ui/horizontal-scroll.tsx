@@ -24,6 +24,8 @@ export function HorizontalScroll({
         direction: 'rtl',
         align: 'start',
         slidesToScroll: 1,
+        dragFree: true,
+        containScroll: 'trimSnaps',
         breakpoints: {
             '(min-width: 1024px)': { slidesToScroll: 2 }
         }
@@ -90,7 +92,7 @@ export function HorizontalScroll({
                 <div className="relative -mx-4 px-4 overflow-hidden" ref={emblaRef}>
                     <div className="flex gap-4 md:gap-6">
                         {children.map((child, index) => (
-                            <div key={index} className="flex-[0_0_46%] sm:flex-[0_0_45%] lg:flex-[0_0_23%] min-w-0">
+                            <div key={index} className="flex-[0_0_46%] sm:flex-[0_0_45%] lg:flex-[0_0_23%] min-w-0 transition-transform duration-300 active:scale-[0.98]">
                                 {child}
                             </div>
                         ))}

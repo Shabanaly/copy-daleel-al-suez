@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { Plus, X, Loader2, Image as ImageIcon } from 'lucide-react'
-import Image from 'next/image'
 import { uploadImageAction } from '@/app/actions/upload-image-action'
+import imageCompression from 'browser-image-compression'
 
 interface ImageUploadProps {
     value?: string | string[] // Support single or multiple
@@ -27,6 +27,7 @@ export default function SupabaseImageUpload({
     const [mounted, setMounted] = useState(false)
     const [localFiles, setLocalFiles] = useState<File[]>([])
     const [isUploading, setIsUploading] = useState(false)
+    const [isCompressing, setIsCompressing] = useState(false)
 
     useEffect(() => {
         setMounted(true)
@@ -37,9 +38,42 @@ export default function SupabaseImageUpload({
         }
     }, [])
 
+    const compressImage = async (file: File) => {
+        const options = {
+            maxSizeMB: 1,
+            maxWidthOrHeight: 1200,
+            useWebWorker: true,
+            initialQuality: 0.8
+        }
+        try {
+            return await imageCompression(file, options)
+        } catch (error) {
+            console.error('Compression failed, using original file:', error)
+            return file
+        }
+    }
+
     const onDrop = async (acceptedFiles: File[]) => {
-        const newFiles = [...localFiles, ...acceptedFiles].slice(0, maxFiles)
+        setIsCompressing(true)
+        const processedFiles: File[] = []
+        const previews: string[] = []
+
+        for (const file of acceptedFiles) {
+            // Only compress if it's an image and larger than 0.5MB or HEIC
+            const isHEIC = file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')
+            let finalFile = file
+
+            if (file.size > 0.5 * 1024 * 1024 || isHEIC) {
+                finalFile = await compressImage(file)
+            }
+
+            processedFiles.push(finalFile)
+            previews.push(URL.createObjectURL(finalFile))
+        }
+
+        const newFiles = [...localFiles, ...processedFiles].slice(0, maxFiles)
         setLocalFiles(newFiles)
+        setIsCompressing(false)
 
         if (onFilesSelected) {
             onFilesSelected(newFiles)
@@ -50,7 +84,7 @@ export default function SupabaseImageUpload({
             setIsUploading(true)
             try {
                 const formData = new FormData()
-                formData.append('files', acceptedFiles[0])
+                formData.append('files', processedFiles[0])
                 const result = await uploadImageAction(formData, bucketName, 'avatars')
                 if (result.success && result.urls) {
                     onChange(result.urls[0])
@@ -62,7 +96,6 @@ export default function SupabaseImageUpload({
             }
         } else {
             // Standard/Deferred mode
-            const previews = acceptedFiles.map(file => URL.createObjectURL(file))
             const newUrls = [...urlsValue, ...previews].slice(0, maxFiles)
             onChange(newUrls)
         }
@@ -71,25 +104,32 @@ export default function SupabaseImageUpload({
     const { getRootProps, getInputProps } = useDropzone({
         onDrop,
         accept: {
-            'image/*': ['.png', '.jpg', '.jpeg', '.webp']
+            'image/*': ['.png', '.jpg', '.jpeg', '.webp', '.heic', '.heif']
         },
         maxFiles: maxFiles - urlsValue.length,
-        disabled: disabled || urlsValue.length >= maxFiles || isUploading
+        disabled: disabled || urlsValue.length >= maxFiles || isUploading || isCompressing
     })
 
     const removeImage = (urlToRemove: string, index: number) => {
         if (urlToRemove.startsWith('blob:')) {
             URL.revokeObjectURL(urlToRemove)
+
+            // Find which local file this corresponds to. 
+            // Existing URLs are at the start, followed by blob previews for local files.
+            const existingUrlsCount = urlsValue.length - localFiles.length
+            const localFileIndex = index - existingUrlsCount
+
+            if (localFileIndex >= 0) {
+                const newFiles = localFiles.filter((_, i) => i !== localFileIndex)
+                setLocalFiles(newFiles)
+                if (onFilesSelected) {
+                    onFilesSelected(newFiles)
+                }
+            }
         }
 
-        const newValue = urlsValue.filter((_, i) => i !== index)
-        const newFiles = localFiles.filter((_, i) => i !== index)
-
-        setLocalFiles(newFiles)
+        const newValue = urlsValue.filter((_, i: number) => i !== index)
         onChange(Array.isArray(value) ? newValue : (newValue[0] || ''))
-        if (onFilesSelected) {
-            onFilesSelected(newFiles)
-        }
     }
 
     const getDisplayUrl = (url: string) => {

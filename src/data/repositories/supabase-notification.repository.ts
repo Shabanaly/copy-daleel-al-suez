@@ -20,8 +20,8 @@ export class SupabaseNotificationRepository implements INotificationRepository {
                 user_id: data.userId,
                 type: data.type,
                 title: data.title,
-                body: data.body,
-                link: data.link,
+                message: data.message,
+                data: data.data || {},
                 is_read: false
             })
             .select()
@@ -72,7 +72,7 @@ export class SupabaseNotificationRepository implements INotificationRepository {
             .from('notifications')
             .update({
                 is_read: true,
-                read_at: new Date().toISOString()
+                // Removed read_at as it doesn't exist in schema.sql
             })
             .eq('id', id);
 
@@ -87,7 +87,6 @@ export class SupabaseNotificationRepository implements INotificationRepository {
             .from('notifications')
             .update({
                 is_read: true,
-                read_at: new Date().toISOString()
             })
             .eq('user_id', userId)
             .eq('is_read', false);
@@ -141,10 +140,9 @@ export class SupabaseNotificationRepository implements INotificationRepository {
 
         updates.updated_at = new Date().toISOString();
 
-        // Check availability first or use upsert
         const { data: updated, error } = await supabase
             .from('notification_preferences')
-            .upsert({ user_id: userId, ...updates }) // Upsert handles create if needed
+            .upsert({ user_id: userId, ...updates })
             .select()
             .single();
 
@@ -172,10 +170,10 @@ export class SupabaseNotificationRepository implements INotificationRepository {
             userId: row.user_id,
             type: row.type,
             title: row.title,
-            body: row.body,
-            link: row.link,
+            message: row.message,
+            data: row.data || {},
             isRead: row.is_read,
-            readAt: row.read_at,
+            readAt: row.read_at, // may be undefined
             createdAt: row.created_at
         };
     }

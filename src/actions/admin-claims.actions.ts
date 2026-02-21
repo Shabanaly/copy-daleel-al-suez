@@ -40,15 +40,19 @@ export async function processClaimAction(claimId: string, status: 'approved' | '
         const repository = new SupabaseBusinessClaimRepository(supabase)
         await repository.updateClaimStatus(claimId, status, user.id, reason)
 
-        // إذا تمت الموافقة، نقوم بتحديث صاحب المنشأة في جدول الأماكن
-        if (status === 'approved') {
-            const { data: claim } = await supabase
-                .from('business_claims')
-                .select('place_id, user_id')
-                .eq('id', claimId)
-                .single()
+        // جلب بيانات الطلب والمكان للإشعار
+        const { data: claim } = await supabase
+            .from('business_claims')
+            .select('place_id, user_id, places(name, slug)')
+            .eq('id', claimId)
+            .single()
 
-            if (claim) {
+        if (claim) {
+            const placeData = claim.places as any;
+            const placeName = placeData?.name || 'نشاطك التجاري';
+            const { createNotificationAction } = await import('./notifications.actions')
+
+            if (status === 'approved') {
                 // تحديث جدول الأماكن
                 await supabase
                     .from('places')
@@ -59,7 +63,7 @@ export async function processClaimAction(claimId: string, status: 'approved' | '
                     })
                     .eq('id', claim.place_id)
 
-                // تحويل دور المستخدم إلى business_owner إذا كان مستخدماً عادياً
+                // تحويل دور المستخدم
                 const { data: profile } = await supabase
                     .from('profiles')
                     .select('role')
@@ -72,6 +76,24 @@ export async function processClaimAction(claimId: string, status: 'approved' | '
                         .update({ role: 'business_owner' })
                         .eq('id', claim.user_id)
                 }
+
+                // إرسال إشعار النجاح
+                await createNotificationAction({
+                    userId: claim.user_id,
+                    title: 'تم توثيق نشاطك التجاري بنجاح! 🎉',
+                    message: `تهانينا! تم قبول طلب توثيقك لـ "${placeName}". يمكنك الآن إدارة النشاط وإضافة العروض.`,
+                    type: 'status_update',
+                    data: { placeId: claim.place_id, slug: placeData?.slug, status: 'approved' }
+                })
+            } else if (status === 'rejected') {
+                // إرسال إشعار الرفض
+                await createNotificationAction({
+                    userId: claim.user_id,
+                    title: 'بخصوص طلب توثيق النشاط التجاري ⚠️',
+                    message: `نعتذر، لم يتم قبول طلب توثيق "${placeName}". ${reason ? `السبب: ${reason}` : 'يرجى التأكد من البيانات والمحاولة لاحقاً.'}`,
+                    type: 'status_update',
+                    data: { placeId: claim.place_id, status: 'rejected' }
+                })
             }
         }
 
