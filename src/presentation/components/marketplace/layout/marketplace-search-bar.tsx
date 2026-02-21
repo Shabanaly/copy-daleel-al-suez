@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { Search, MapPin, X, Loader2, ChevronDown, Store, ChevronRight, ShoppingBag, Crosshair } from 'lucide-react'
+import { Search, MapPin, X, Loader2, ChevronDown, Store, ChevronRight, ShoppingBag } from 'lucide-react'
 import { toast } from 'sonner'
 import { useDebounce } from 'use-debounce'
 import { cn } from '@/lib/utils'
@@ -23,16 +23,9 @@ export function MarketplaceSearchBar({ initialMobileFocus = false, onClose }: { 
     const [debouncedQuery] = useDebounce(query, 300)
 
     // Use Global Area Context
-    const { areas, currentArea, setCurrentArea, detectNearestArea, locationError } = useArea()
+    const { areas, currentArea, setCurrentArea } = useArea()
     const selectedArea = currentArea?.id || ''
 
-    // Show location error if it occurs
-    useEffect(() => {
-        if (locationError) {
-            console.error("Location Error:", locationError)
-            toast.error(locationError)
-        }
-    }, [locationError])
 
     const [results, setResults] = useState<MarketplaceSearchResult[]>([])
     const [history, setHistory] = useState<SearchHistoryItem[]>([])
@@ -271,19 +264,6 @@ export function MarketplaceSearchBar({ initialMobileFocus = false, onClose }: { 
                         <>
                             <div className="fixed inset-0 z-[70]" onClick={(e) => { e.stopPropagation(); setShowAreaMenu(false); }} />
                             <div className="absolute top-full right-0 mt-2 w-56 bg-popover border border-border rounded-xl shadow-2xl overflow-hidden z-[80] animate-in fade-in slide-in-from-top-1">
-                                <div className="p-2 border-b bg-muted/30 mb-1">
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            detectNearestArea()
-                                            setShowAreaMenu(false)
-                                        }}
-                                        className="w-full flex items-center gap-2 px-2 py-1.5 text-xs font-bold text-primary bg-primary/10 hover:bg-primary/20 rounded-lg transition-colors"
-                                    >
-                                        <Crosshair size={14} />
-                                        تحديد موقعي تلقائياً
-                                    </button>
-                                </div>
                                 <div className="max-h-60 overflow-y-auto custom-scrollbar">
                                     <button
                                         key="all-areas"

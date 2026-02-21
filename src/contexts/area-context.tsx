@@ -95,9 +95,7 @@ export function useArea() {
             areas: [],
             currentArea: null,
             setCurrentArea: () => { },
-            isLoading: false,
-            locationError: null,
-            detectNearestArea: () => { }
+            isLoading: false
         };
     }
     return context;

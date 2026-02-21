@@ -11,7 +11,7 @@ export class SupabaseAreaRepository implements IAreaRepository {
 
         const { data, error } = await supabase
             .from('areas')
-            .select('*')
+            .select('*, districts(name)')
             .eq('is_active', true)
             .order('name');
 
@@ -20,11 +20,12 @@ export class SupabaseAreaRepository implements IAreaRepository {
             return [];
         }
 
-        return data.map((item) => ({
+        return data.map((item: any) => ({
             id: item.id,
             name: item.name,
             slug: item.slug,
             districtId: item.district_id,
+            districtName: item.districts?.name,
             isActive: item.is_active,
             createdAt: item.created_at
         }));
@@ -42,7 +43,7 @@ export class SupabaseAreaRepository implements IAreaRepository {
                 district_id: area.districtId,
                 is_active: true
             })
-            .select('*')
+            .select('*, districts(name)')
             .single();
 
         if (error) throw new Error(error.message);
@@ -52,6 +53,7 @@ export class SupabaseAreaRepository implements IAreaRepository {
             name: data.name,
             slug: data.slug,
             districtId: data.district_id,
+            districtName: data.districts?.name,
             isActive: data.is_active,
             createdAt: data.created_at
         };
@@ -63,7 +65,7 @@ export class SupabaseAreaRepository implements IAreaRepository {
 
         const { data, error } = await supabase
             .from('areas')
-            .select('*')
+            .select('*, districts(name)')
             .ilike('name', name)
             .maybeSingle();
 
@@ -73,6 +75,8 @@ export class SupabaseAreaRepository implements IAreaRepository {
             id: data.id,
             name: data.name,
             slug: data.slug,
+            districtId: data.district_id,
+            districtName: data.districts?.name,
             isActive: data.is_active,
             createdAt: data.created_at
         };

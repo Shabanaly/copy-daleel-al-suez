@@ -30,6 +30,8 @@ export interface MarketplaceItem {
 
     location?: string;
     area_id?: string;
+    area_name?: string;
+    district_name?: string;
 
     seller_id: string;
     seller_name?: string;

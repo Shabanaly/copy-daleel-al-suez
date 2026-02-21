@@ -176,7 +176,10 @@ export default function AddPlaceForm({ categories, areas, initialPlace }: AddPla
     useEffect(() => {
         const fetchDistricts = async () => {
             const data = await getDistrictsAction();
-            if (data) setDistricts(data);
+            if (data) {
+                if (data.length === 0) console.warn('AddPlaceForm: Districts list is empty. Possible RLS issue.');
+                setDistricts(data);
+            }
         };
         fetchDistricts();
     }, []);
@@ -361,7 +364,9 @@ export default function AddPlaceForm({ categories, areas, initialPlace }: AddPla
                                                 onChange={(e) => setNewAreaDistrictId(e.target.value)}
                                                 className="flex-1 min-w-0 px-3 py-2 bg-background border border-primary/30 rounded-xl text-sm outline-none focus:ring-1 focus:ring-primary w-full cursor-pointer"
                                             >
-                                                <option value="">اختر الحي الرئيسي...</option>
+                                                <option value="" disabled>
+                                                    {districts.length > 0 ? 'اختر الحي الرئيسي...' : 'لا يوجد أحياء - يرجى تهيئة النظام'}
+                                                </option>
                                                 {districts.map(d => (
                                                     <option key={d.id} value={d.id}>{d.name}</option>
                                                 ))}
@@ -384,9 +389,36 @@ export default function AddPlaceForm({ categories, areas, initialPlace }: AddPla
                                         className="w-full px-4 py-3 bg-background border border-border rounded-xl text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors appearance-none cursor-pointer"
                                     >
                                         <option value="">بدون منطقة</option>
-                                        {areas?.map(area => (
-                                            <option key={area.id} value={area.id}>{area.name}</option>
-                                        ))}
+                                        {districts.map((district: any) => {
+                                            const districtAreas = areas.filter((a: any) => a.districtId === district.id);
+                                            if (districtAreas.length === 0) return null;
+                                            return (
+                                                <optgroup key={district.id} label={district.name} className="bg-background font-bold text-primary">
+                                                    {districtAreas.map((area: any) => (
+                                                        <option key={area.id} value={area.id} className="text-foreground font-normal">
+                                                            {area.name}
+                                                        </option>
+                                                    ))}
+                                                </optgroup>
+                                            )
+                                        })}
+                                        {/* Areas without district or with orphan district IDs fallback */}
+                                        {(() => {
+                                            const districtIds = districts.map((d: any) => d.id);
+                                            const orphanAreas = areas.filter((a: any) => !a.districtId || !districtIds.includes(a.districtId));
+
+                                            if (orphanAreas.length === 0) return null;
+
+                                            return (
+                                                <optgroup label={districts.length > 0 ? "أخرى" : "كل المناطق"} className="bg-background font-bold">
+                                                    {orphanAreas.map((area: any) => (
+                                                        <option key={area.id} value={area.id} className="text-foreground font-normal">
+                                                            {area.name}
+                                                        </option>
+                                                    ))}
+                                                </optgroup>
+                                            );
+                                        })()}
                                     </select>
                                 )}
                                 {state.errors?.areaId && <p className="text-red-500 text-xs mt-1 font-medium">{state.errors.areaId[0]}</p>}

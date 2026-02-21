@@ -14,6 +14,7 @@ interface MarketplaceSearchPageProps {
         minPrice?: string;
         maxPrice?: string;
         areaId?: string;
+        districtId?: string;
         sort?: string;
         listing_type?: string;
         brand?: string;
@@ -40,6 +41,7 @@ export default async function MarketplaceSearchPage({ searchParams }: Marketplac
         minPrice: params.minPrice ? Number(params.minPrice) : undefined,
         maxPrice: params.maxPrice ? Number(params.maxPrice) : undefined,
         areaId: params.areaId,
+        districtId: params.districtId,
         attributes: Object.keys(attributes).length > 0 ? attributes : undefined,
     };
 

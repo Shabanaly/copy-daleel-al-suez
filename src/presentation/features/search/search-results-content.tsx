@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from 'react'
 import useSWR from 'swr'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { searchPlacesAndEvents, SearchResult } from '@/actions/search.actions'
-import { Loader2, Search, Store, Calendar, FileText, Filter, ArrowLeft, ChevronLeft } from 'lucide-react'
+import { Loader2, Search, Store, Calendar, FileText, Filter, ArrowLeft, ChevronLeft, MapPin, HelpCircle } from 'lucide-react'
 import Link from 'next/link'
 import NextImage from 'next/image'
 import { cn } from '@/lib/utils'
@@ -234,7 +234,8 @@ function SearchResultCard({ result, mini = false }: { result: SearchResult, mini
     const icon = {
         'place': <Store size={14} className="text-green-600" />,
         'event': <Calendar size={14} className="text-orange-600" />,
-        'article': <FileText size={14} className="text-blue-600" />
+        'article': <FileText size={14} className="text-blue-600" />,
+        'question': <HelpCircle size={14} className="text-purple-600" />
     }[result.type]
 
     return (
@@ -276,11 +277,21 @@ function SearchResultCard({ result, mini = false }: { result: SearchResult, mini
                     </p>
                 )}
 
-                <div className="mt-auto flex items-center justify-between pt-2 border-t border-border/50">
-                    <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                        {(result.category && CATEGORY_LABELS[result.category]) || result.category || result.type}
-                    </span>
-                    <ArrowLeft size={14} className="text-primary opacity-0 group-hover:opacity-100 transition-opacity -translate-x-2 group-hover:translate-x-0 duration-300" />
+                <div className="mt-auto flex flex-col gap-1.5 pt-2 border-t border-border/50">
+                    <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                            {(result.category && CATEGORY_LABELS[result.category]) || result.category || result.type}
+                        </span>
+                        <ArrowLeft size={14} className="text-primary opacity-0 group-hover:opacity-100 transition-opacity -translate-x-2 group-hover:translate-x-0 duration-300" />
+                    </div>
+                    {result.location && (
+                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground/70 truncate">
+                            <MapPin size={10} />
+                            <span className="truncate">
+                                {result.district && result.location ? `${result.district} - ${result.location}` : result.location}
+                            </span>
+                        </div>
+                    )}
                 </div>
             </div>
         </Link>

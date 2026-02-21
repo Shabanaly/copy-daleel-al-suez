@@ -20,7 +20,7 @@ import { QuickDiscoveryGrid } from "@/presentation/components/home/quick-discove
 import { PersonalizedSection } from "@/presentation/components/home/personalized-section";
 import { TrendingUp, Clock as ClockIcon } from "lucide-react";
 
-import { ArrowLeft, Sparkles, Calendar, MapPin, Search, Utensils, Pill, Coffee, Landmark, Navigation, Store } from "lucide-react";
+import { ArrowLeft, Sparkles, Calendar, MapPin, Search, Utensils, Pill, Coffee, Landmark, Navigation } from "lucide-react";
 import { HeaderSearchBar } from "@/presentation/components/shared/layout/header-search-bar";
 import { HorizontalScroll } from "@/presentation/components/shared/ui/horizontal-scroll";
 import { useSmartLogic } from "@/hooks/use-smart-logic";
@@ -155,9 +155,9 @@ export function HomeView({
                     </p>
 
                     {/* Smart Search Bar */}
-                    <div className="max-w-2xl mx-auto w-full mb-6">
-                        <div className="bg-white/10 backdrop-blur-xl p-2 rounded-[2.5rem] border border-white/20 shadow-2xl relative z-[100]">
-                            <HeaderSearchBar />
+                    <div className="max-w-2xl mx-auto w-full mb-6 relative">
+                        <div className="bg-white/10 backdrop-blur-xl p-1.5 rounded-full border border-white/20 shadow-2xl relative z-[101]">
+                            <HeaderSearchBar containerClassName="max-w-none" />
                         </div>
                     </div>
                 </div>
@@ -249,9 +249,9 @@ export function HomeView({
                                     <SuggestionButton icon={<Utensils size={14} />} label="مطاعم" href="/categories/restaurants" isDark />
                                     <SuggestionButton icon={<Pill size={14} />} label="صيدليات" href="/categories/pharmacies" isDark />
                                     <SuggestionButton icon={<Coffee size={14} />} label="كافيهات" href="/categories/cafes" isDark />
-                                    <SuggestionButton icon={<Store size={14} />} label="السوق" href="/marketplace" isPrimary />
                                 </>
                             )}
+                            <SuggestionButton icon={<Navigation size={14} />} label="خريطة السويس" href="/explore/map" isPrimary />
                         </div>
                     </div>
                 </div>

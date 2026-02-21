@@ -141,11 +141,14 @@ export function MarketplaceItemCard({
                         {item.title}
                     </h3>
 
-                    {/* Bottom Info: Location & Time */}
                     <div className="mt-auto flex items-center justify-between text-[10px] text-muted-foreground pt-2">
-                        <div className="flex items-center gap-1 truncate max-w-[70%]">
+                        <div className="flex items-center gap-1 truncate max-w-[75%]">
                             <MapPin className="w-3 h-3 text-muted-foreground/70 shrink-0" />
-                            <span className="truncate">{item.location || 'السويس'}</span>
+                            <span className="truncate">
+                                {item.district_name && item.area_name
+                                    ? `${item.district_name} - ${item.area_name}`
+                                    : item.area_name || item.district_name || item.location || 'السويس'}
+                            </span>
                         </div>
                         <span suppressHydrationWarning={true}>{timeAgo(item.created_at)}</span>
                     </div>

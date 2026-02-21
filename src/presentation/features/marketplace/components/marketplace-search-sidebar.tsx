@@ -4,7 +4,9 @@ import { useState, useEffect } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { MapPin, Filter, X, ChevronDown, DollarSign, ShoppingBag } from 'lucide-react'
 import { getAreasAction } from '@/actions/area.actions'
+import { getDistrictsAction } from '@/actions/district.actions'
 import { Area } from '@/domain/entities/area'
+import { District } from '@/domain/entities/district'
 import { cn } from '@/lib/utils'
 
 interface MarketplaceSearchSidebarProps {
@@ -18,6 +20,8 @@ export function MarketplaceSearchSidebar({ initialFilters, onApply }: Marketplac
     const searchParams = useSearchParams()
 
     const [areas, setAreas] = useState<Area[]>([])
+    const [districts, setDistricts] = useState<District[]>([])
+    const [selectedDistrict, setSelectedDistrict] = useState(initialFilters.districtId || '')
     const [selectedArea, setSelectedArea] = useState(initialFilters.areaId || '')
     const [minPrice, setMinPrice] = useState(initialFilters.minPrice?.toString() || '')
     const [maxPrice, setMaxPrice] = useState(initialFilters.maxPrice?.toString() || '')
@@ -26,11 +30,17 @@ export function MarketplaceSearchSidebar({ initialFilters, onApply }: Marketplac
     const [storage, setStorage] = useState(initialFilters.storage || '')
 
     useEffect(() => {
-        getAreasAction().then(setAreas)
+        Promise.all([getAreasAction(), getDistrictsAction()]).then(([areasData, districtsData]) => {
+            setAreas(areasData)
+            setDistricts(districtsData)
+        })
     }, [])
 
     const handleApply = () => {
         const params = new URLSearchParams(searchParams.toString())
+
+        if (selectedDistrict) params.set('districtId', selectedDistrict)
+        else params.delete('districtId')
 
         if (selectedArea) params.set('areaId', selectedArea)
         else params.delete('areaId')
@@ -55,6 +65,7 @@ export function MarketplaceSearchSidebar({ initialFilters, onApply }: Marketplac
     }
 
     const handleClear = () => {
+        setSelectedDistrict('')
         setSelectedArea('')
         setMinPrice('')
         setMaxPrice('')
@@ -63,6 +74,7 @@ export function MarketplaceSearchSidebar({ initialFilters, onApply }: Marketplac
         setStorage('')
 
         const params = new URLSearchParams(searchParams.toString())
+        params.delete('districtId')
         params.delete('areaId')
         params.delete('minPrice')
         params.delete('maxPrice')
@@ -71,7 +83,8 @@ export function MarketplaceSearchSidebar({ initialFilters, onApply }: Marketplac
         if (onApply) onApply()
     }
 
-    const hasChanges = selectedArea !== (initialFilters.areaId || '') ||
+    const hasChanges = selectedDistrict !== (initialFilters.districtId || '') ||
+        selectedArea !== (initialFilters.areaId || '') ||
         minPrice !== (initialFilters.minPrice?.toString() || '') ||
         maxPrice !== (initialFilters.maxPrice?.toString() || '') ||
         listingType !== (initialFilters.listing_type || '') ||
@@ -86,7 +99,7 @@ export function MarketplaceSearchSidebar({ initialFilters, onApply }: Marketplac
                         <Filter size={18} className="text-primary" />
                         تصفية النتائج
                     </h3>
-                    {(selectedArea || minPrice || maxPrice) && (
+                    {(selectedDistrict || selectedArea || minPrice || maxPrice) && (
                         <button onClick={handleClear} className="text-xs text-red-500 font-bold hover:underline">
                             مسح الكل
                         </button>
@@ -94,12 +107,32 @@ export function MarketplaceSearchSidebar({ initialFilters, onApply }: Marketplac
                 </div>
 
                 <div className="p-6 space-y-8">
-                    {/* Area Filter */}
-                    <div>
-                        <label className="block text-sm font-bold text-foreground mb-4 flex items-center gap-2">
+                    {/* District & Area Filter */}
+                    <div className="space-y-4">
+                        <label className="block text-sm font-bold text-foreground mb-1 flex items-center gap-2">
                             <MapPin size={16} className="text-primary" />
-                            المنطقة
+                            الموقع (الحي والمنطقة)
                         </label>
+
+                        {/* District Dropdown */}
+                        <div className="relative group">
+                            <select
+                                value={selectedDistrict}
+                                onChange={(e) => {
+                                    setSelectedDistrict(e.target.value)
+                                    setSelectedArea('') // Clear area when district changes
+                                }}
+                                className="w-full pl-10 pr-4 py-3 bg-muted border border-border rounded-2xl text-sm appearance-none focus:bg-card focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none text-foreground"
+                            >
+                                <option value="" className="bg-card">كل أحياء السويس</option>
+                                {districts.map(district => (
+                                    <option key={district.id} value={district.id} className="bg-card text-foreground">{district.name}</option>
+                                ))}
+                            </select>
+                            <ChevronDown size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                        </div>
+
+                        {/* Area Dropdown */}
                         <div className="relative group">
                             <select
                                 value={selectedArea}
@@ -107,12 +140,14 @@ export function MarketplaceSearchSidebar({ initialFilters, onApply }: Marketplac
                                 className="w-full pl-10 pr-4 py-3 bg-muted border border-border rounded-2xl text-sm appearance-none focus:bg-card focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none text-foreground"
                             >
                                 <option value="" className="bg-card">كل المناطق</option>
-                                {areas.map(area => (
-                                    <option key={area.id} value={area.id} className="bg-card text-foreground">{area.name}</option>
-                                ))}
+                                {areas
+                                    .filter(area => !selectedDistrict || area.districtId === selectedDistrict)
+                                    .map(area => (
+                                        <option key={area.id} value={area.id} className="bg-card text-foreground">{area.name}</option>
+                                    ))
+                                }
                             </select>
-                            <ChevronDown size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none group-focus-within:text-primary transition-colors" />
-                            <MapPin size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                            <ChevronDown size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                         </div>
                     </div>
 

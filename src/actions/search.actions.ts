@@ -13,6 +13,8 @@ export interface SearchResult {
     category?: string
     rating?: number
     date?: string // For events, news, questions
+    location?: string
+    district?: string
 }
 
 export async function searchPlacesAndEvents(query: string, areaId?: string): Promise<SearchResult[]> {
@@ -33,7 +35,8 @@ export async function searchPlacesAndEvents(query: string, areaId?: string): Pro
                 images,
                 categories(name),
                 rating,
-                area_id
+                area_id,
+                areas(name, districts(name))
             `)
             .ilike('name', `%${query}%`)
             .limit(10)
@@ -59,7 +62,11 @@ export async function searchPlacesAndEvents(query: string, areaId?: string): Pro
                 slug: `/places/${place.slug}`,
                 // @ts-ignore
                 category: place.categories?.name,
-                rating: place.rating
+                rating: place.rating,
+                // @ts-ignore
+                location: place.areas?.name,
+                // @ts-ignore
+                district: place.areas?.districts?.name
             }))
         }
 

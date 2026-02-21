@@ -16,6 +16,7 @@ interface MarketplaceSearchResultsViewProps {
     searchQuery?: string
     activeCategory?: string
     areaId?: string
+    districtId?: string
     minPrice?: number | string
     maxPrice?: number | string
     categoriesWithCounts?: any[]
@@ -27,6 +28,7 @@ export function MarketplaceSearchResultsView({
     searchQuery,
     activeCategory: initialActiveCategory,
     areaId,
+    districtId,
     minPrice,
     maxPrice
 }: MarketplaceSearchResultsViewProps) {
@@ -37,6 +39,7 @@ export function MarketplaceSearchResultsView({
     const effectiveSearchQuery = initialFilters?.query || searchQuery || ''
     const effectiveActiveCategory = initialFilters?.category || initialActiveCategory || 'all'
     const effectiveAreaId = initialFilters?.areaId || areaId
+    const effectiveDistrictId = initialFilters?.districtId || districtId
     const effectiveMinPrice = initialFilters?.minPrice?.toString() || minPrice?.toString()
     const effectiveMaxPrice = initialFilters?.maxPrice?.toString() || maxPrice?.toString()
 
@@ -73,6 +76,7 @@ export function MarketplaceSearchResultsView({
         query: queryFromParams,
         category: activeCategory,
         areaId: effectiveAreaId,
+        districtId: effectiveDistrictId,
         minPrice: effectiveMinPrice,
         maxPrice: effectiveMaxPrice
     }), [queryFromParams, activeCategory, effectiveAreaId, effectiveMinPrice, effectiveMaxPrice])

@@ -3,6 +3,7 @@ export interface Area {
     name: string;
     slug: string;
     districtId?: string; // Optional during transition
+    districtName?: string;
 
     isActive: boolean;
 

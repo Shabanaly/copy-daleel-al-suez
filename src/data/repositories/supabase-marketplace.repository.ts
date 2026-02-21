@@ -8,10 +8,10 @@ export class SupabaseMarketplaceRepository {
         const supabase = this.supabase;
         if (!supabase) return { items: [], count: 0 };
 
-        let selectFields = "id, slug, title, price, price_type, category, condition, images, location, area_id, seller_id, status, is_featured, view_count, created_at, expires_at, last_bump_at, profiles:seller_id(full_name, avatar_url, phone)";
+        let selectFields = "id, slug, title, price, price_type, category, condition, images, location, area_id, seller_id, status, is_featured, view_count, created_at, expires_at, last_bump_at, profiles:seller_id(full_name, avatar_url, phone), areas(name, districts(name))";
 
         if (filters?.districtId) {
-            selectFields += ", areas!inner(district_id)";
+            selectFields = "id, slug, title, price, price_type, category, condition, images, location, area_id, seller_id, status, is_featured, view_count, created_at, expires_at, last_bump_at, profiles:seller_id(full_name, avatar_url, phone), areas!inner(name, district_id, districts(name))";
         }
 
         let dbQuery = supabase
@@ -325,6 +325,8 @@ export class SupabaseMarketplaceRepository {
             images: row.images || [],
             location: row.location,
             area_id: row.area_id,
+            area_name: row.areas?.name,
+            district_name: row.areas?.districts?.name,
             seller_id: row.seller_id,
             seller_name: row.profiles?.full_name,
             seller_avatar: row.profiles?.avatar_url,

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Search, MapPin, X, Loader2, ChevronDown, Calendar, FileText, Store, ChevronRight, Crosshair, MessageSquare } from 'lucide-react'
+import { Search, MapPin, X, Loader2, ChevronDown, Calendar, FileText, Store, ChevronRight, MessageSquare } from 'lucide-react'
 import { toast } from 'sonner'
 import { useDebounce } from 'use-debounce'
 import { cn } from '@/lib/utils'
@@ -14,7 +14,15 @@ import { Area } from '@/domain/entities/area'
 import Image from 'next/image'
 
 import { useArea } from '@/contexts/area-context'
-export function HeaderSearchBar({ initialMobileFocus = false, onClose }: { initialMobileFocus?: boolean; onClose?: () => void }) {
+export function HeaderSearchBar({
+    initialMobileFocus = false,
+    onClose,
+    containerClassName
+}: {
+    initialMobileFocus?: boolean;
+    onClose?: () => void;
+    containerClassName?: string;
+}) {
     const router = useRouter()
     const containerRef = useRef<HTMLDivElement>(null)
     const inputRef = useRef<HTMLInputElement>(null)
@@ -22,17 +30,9 @@ export function HeaderSearchBar({ initialMobileFocus = false, onClose }: { initi
     const [debouncedQuery] = useDebounce(query, 300)
 
     // Use Global Area Context
-    const { areas, currentArea, setCurrentArea, detectNearestArea, locationError } = useArea()
+    const { areas, currentArea, setCurrentArea } = useArea()
     const selectedArea = currentArea?.id || ''
 
-    // Show location error if it occurs
-    useEffect(() => {
-        if (locationError) {
-            // You'll need to import 'toast' from 'sonner' or your toast library
-            console.error("Location Error:", locationError)
-            toast.error(locationError)
-        }
-    }, [locationError])
 
     const [results, setResults] = useState<SearchResult[]>([])
     const [history, setHistory] = useState<SearchHistoryItem[]>([])
@@ -255,9 +255,10 @@ export function HeaderSearchBar({ initialMobileFocus = false, onClose }: { initi
     if (selectedArea) linkParams.set('area', selectedArea)
 
     return (
-        <div ref={containerRef} className="relative w-full max-w-lg mx-auto">
+        <div ref={containerRef} className={cn("relative w-full max-w-lg mx-auto", containerClassName)}>
             <form onSubmit={handleSearchSubmit} className={cn(
-                "relative flex items-center bg-muted/50 border border-border/60 rounded-full transition-all duration-300 z-[60]",
+                "w-full max-w-full box-border relative flex items-center bg-muted/50 border border-border/60 rounded-full transition-all duration-300",
+                showAreaMenu ? "z-[120]" : "z-[60]",
                 "focus-within:bg-background focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10",
                 "hover:bg-muted/80 hover:border-primary/30"
             )}>
@@ -277,11 +278,11 @@ export function HeaderSearchBar({ initialMobileFocus = false, onClose }: { initi
                 )}
 
                 {/* Area Selector Trigger (Global Only) */}
-                <div className="relative border-l border-border/50 pl-1 shrink-0">
+                <div className="relative border-e border-border/50 pe-1 shrink-0">
                     <button
                         type="button"
                         onClick={() => setShowAreaMenu(!showAreaMenu)}
-                        className="flex items-center gap-1.5 px-2 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                        className="flex items-center gap-1 px-1.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
                     >
                         {/* Only render content after mount to avoid hydration mismatch with local storage */}
                         {mounted ? (
@@ -308,23 +309,10 @@ export function HeaderSearchBar({ initialMobileFocus = false, onClose }: { initi
                     {showAreaMenu && (
                         <>
                             <div
-                                className="fixed inset-0 z-40 bg-transparent"
+                                className="fixed inset-0 z-[125] bg-transparent"
                                 onClick={() => setShowAreaMenu(false)}
                             />
-                            <div className="absolute top-full right-0 mt-2 w-56 bg-popover border border-border rounded-xl shadow-lg overflow-hidden z-50 animate-in fade-in slide-in-from-top-1">
-                                <div className="p-2 border-b bg-muted/30 mb-1">
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            detectNearestArea()
-                                            setShowAreaMenu(false)
-                                        }}
-                                        className="w-full flex items-center gap-2 px-2 py-1.5 text-xs font-bold text-primary bg-primary/10 hover:bg-primary/20 rounded-lg transition-colors"
-                                    >
-                                        <Crosshair size={14} />
-                                        تحديد موقعي تلقائياً
-                                    </button>
-                                </div>
+                            <div className="absolute top-full right-0 mt-2 w-56 bg-popover border border-border rounded-xl shadow-lg overflow-hidden z-[130] animate-in fade-in slide-in-from-top-1">
                                 <div className="max-h-60 overflow-y-auto custom-scrollbar">
                                     <button
                                         type="button"
@@ -374,11 +362,11 @@ export function HeaderSearchBar({ initialMobileFocus = false, onClose }: { initi
                         fetchHistory()
                     }}
                     placeholder={placeholder}
-                    className="flex-1 min-w-0 bg-transparent border-none outline-none text-sm px-3 py-2.5 placeholder:text-muted-foreground/70"
+                    className="flex-1 min-w-0 bg-transparent border-none outline-none text-xs md:text-sm ps-2.5 pe-1 py-2 placeholder:text-muted-foreground/70"
                 />
 
                 {/* Actions */}
-                <div className="flex items-center pl-3 pr-1 gap-1 shrink-0">
+                <div className="flex items-center pe-1.5 ps-0.5 gap-2 shrink-0">
                     {/* Clear Button (if query exists) */}
                     {isLoading ? (
                         <Loader2 size={16} className="text-muted-foreground animate-spin" />
@@ -409,18 +397,17 @@ export function HeaderSearchBar({ initialMobileFocus = false, onClose }: { initi
 
 
 
-            {/* Search Results Overlay */}
+            {/* Search Results Overlay / Dropdown */}
             {
                 isOpen && (
                     <>
-                        {/* Backdrop for Mobile */}
-                        <div
-                            className="md:hidden fixed inset-0 bg-background/80 backdrop-blur-sm z-40"
-                            onClick={() => window.history.back()}
-                        />
-
-                        {/* --- Mobile Results Overlay --- */}
-                        <div className="md:hidden fixed top-[72px] left-0 right-0 bottom-0 bg-background border-t border-border shadow-none z-50 overflow-hidden animate-in fade-in slide-in-from-top-1">
+                        {/* --- Mobile Results --- */}
+                        <div className={cn(
+                            "md:hidden animate-in fade-in slide-in-from-top-1 z-[110]",
+                            initialMobileFocus
+                                ? "relative flex-1 overflow-hidden pointer-events-auto h-full" // Header Modal Mode
+                                : "absolute top-full left-0 right-0 mt-2 bg-popover border border-border rounded-2xl shadow-xl overflow-hidden" // Hero Inline Mode
+                        )}>
                             {query.length < 2 && (
                                 <div className="p-4 flex flex-col">
                                     {history && history.length > 0 && (
@@ -547,7 +534,7 @@ export function HeaderSearchBar({ initialMobileFocus = false, onClose }: { initi
                         </div>
 
                         {/* --- Desktop Results Dropdown --- */}
-                        <div className="hidden md:block absolute top-full left-0 right-0 mt-2 bg-popover border border-border rounded-2xl shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+                        <div className="hidden md:block absolute top-full left-0 right-0 mt-2 bg-popover border border-border rounded-2xl shadow-xl overflow-hidden z-[110] animate-in fade-in slide-in-from-top-2">
                             {query.length < 2 && (
                                 <div className="p-2">
                                     {history && history.length > 0 ? (

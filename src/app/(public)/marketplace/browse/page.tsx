@@ -11,6 +11,7 @@ import type { Metadata } from 'next';
 import { CategoryViewTracker } from '@/presentation/components/marketplace/category-view-tracker';
 import { SearchTracker } from '@/presentation/components/marketplace/search-tracker';
 import { MarketplaceSpy } from '@/presentation/components/marketplace/marketplace-spy';
+import { MarketplaceSearchSidebar } from '@/presentation/features/marketplace/components/marketplace-search-sidebar';
 
 export const metadata: Metadata = {
     title: 'تصفح سوق السويس — كل الإعلانات | دليل السويس',
@@ -29,7 +30,8 @@ interface MarketplaceBrowsePageProps {
         type?: string;
         minPrice?: string;
         maxPrice?: string;
-        area?: string;
+        areaId?: string;
+        districtId?: string;
         page?: string;
     }>
 }
@@ -47,7 +49,8 @@ export default async function MarketplaceBrowsePage({ searchParams }: Marketplac
         category: params.category as MarketplaceItemCategory | undefined,
         minPrice: params.minPrice ? Number(params.minPrice) : undefined,
         maxPrice: params.maxPrice ? Number(params.maxPrice) : undefined,
-        areaId: params.area,
+        areaId: params.areaId,
+        districtId: params.districtId,
         attributes: {}
     };
 
@@ -106,9 +109,13 @@ export default async function MarketplaceBrowsePage({ searchParams }: Marketplac
                 </div>
             </div>
 
-            <div className="flex flex-col gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                <aside className="hidden lg:block lg:col-span-1">
+                    <MarketplaceSearchSidebar initialFilters={filters} />
+                </aside>
+
                 {/* Main Content */}
-                <div className="w-full">
+                <div className="lg:col-span-3">
                     {items.length > 0 ? (
                         <>
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
@@ -125,7 +132,8 @@ export default async function MarketplaceBrowsePage({ searchParams }: Marketplac
                                     type: params.type,
                                     minPrice: params.minPrice,
                                     maxPrice: params.maxPrice,
-                                    area: params.area,
+                                    areaId: params.areaId,
+                                    districtId: params.districtId,
                                 }}
                             />
                         </>

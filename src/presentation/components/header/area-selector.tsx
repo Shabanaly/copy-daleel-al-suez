@@ -1,12 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { MapPin, ChevronDown, Check, Crosshair } from 'lucide-react'
+import { MapPin, ChevronDown, Check } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useArea } from '@/contexts/area-context'
 
 export function AreaSelector({ onSelect }: { onSelect?: (areaId: string | null) => void }) {
-    const { areas, currentArea, setCurrentArea, isLoading, detectNearestArea } = useArea()
+    const { areas, currentArea, setCurrentArea, isLoading } = useArea()
     const [isOpen, setIsOpen] = useState(false)
 
     const handleSelect = (area: any | null) => {
@@ -15,10 +15,6 @@ export function AreaSelector({ onSelect }: { onSelect?: (areaId: string | null) 
         onSelect?.(area?.id || null)
     }
 
-    const handleDetectLocation = () => {
-        detectNearestArea()
-        setIsOpen(false)
-    }
 
     return (
         <div className="relative z-50">
@@ -50,13 +46,6 @@ export function AreaSelector({ onSelect }: { onSelect?: (areaId: string | null) 
                         >
                             <div className="sticky top-0 bg-popover border-b border-border p-2 space-y-2">
                                 <p className="text-xs text-muted-foreground font-medium px-2">اختر المنطقة</p>
-                                <button
-                                    onClick={handleDetectLocation}
-                                    className="w-full flex items-center gap-2 px-2 py-1.5 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-md transition-colors"
-                                >
-                                    <Crosshair size={14} />
-                                    تحديد موقعي تلقائياً
-                                </button>
                             </div>
 
                             <button

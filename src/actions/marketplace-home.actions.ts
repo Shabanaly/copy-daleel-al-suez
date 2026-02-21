@@ -18,7 +18,8 @@ const LISTING_FIELDS = `
     created_at, 
     condition,
     status,
-    expires_at
+    expires_at,
+    areas(name, districts(name))
 `
 
 // Helper to map DB row to Entity
@@ -30,6 +31,8 @@ function mapToEntity(row: any): MarketplaceItem {
         viewCount: row.view_count || 0,
         images: row.images || [],
         price: row.price || 0,
+        area_name: row.areas?.name,
+        district_name: row.areas?.districts?.name,
     } as MarketplaceItem
 }
 

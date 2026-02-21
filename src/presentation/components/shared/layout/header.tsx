@@ -52,6 +52,10 @@ export function Header({ settings }: { settings?: Record<string, unknown> }) {
     }, [isHomePage])
 
     useEffect(() => {
+        setIsSearchOpen(false)
+    }, [pathname])
+
+    useEffect(() => {
         const checkUser = async () => {
             const { data: { user } } = await supabase.auth.getUser()
             setUser(user)
