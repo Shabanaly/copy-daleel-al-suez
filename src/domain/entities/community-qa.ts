@@ -16,7 +16,7 @@ export interface CommunityQuestion {
     content: string;
     user_id: string;
 
-    views: number;
+    view_count: number;
     answers_count: number;
     votes_count: number;
 

@@ -12,6 +12,8 @@ import { GoogleMapEmbed } from "@/presentation/features/places/components/google
 import { PlaceCard } from "@/presentation/features/places/components/place-card";
 import { ReviewsSectionWrapper } from "@/presentation/features/reviews/components/reviews-section-wrapper";
 import { useSpyOnPlace } from "@/lib/user-spy/use-spy-on";
+import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 import { DeliveryOptions } from "@/presentation/features/places/components/delivery-options";
 import { PeakHoursIndicator } from "@/presentation/features/places/components/peak-hours-indicator";
@@ -36,10 +38,49 @@ export function PlaceDetailsView({
     relatedPlaces = [],
     reviews,
     ratingStats,
-    currentUserId,
-    userReview
+    currentUserId: initialUserId,
+    userReview: initialUserReview
 }: PlaceDetailsViewProps) {
     useSpyOnPlace(place.id, place.categorySlug);
+
+    const [user, setUser] = useState<any>(null);
+    const [personalReview, setPersonalReview] = useState<Review | null>(initialUserReview || null);
+
+    useEffect(() => {
+        const fetchUserData = async () => {
+            const supabase = createClient();
+            const { data: { user: authUser } } = await supabase.auth.getUser();
+
+            if (authUser) {
+                setUser(authUser);
+                // Only fetch review if not provided by initial props (which is unlikely now)
+                if (!initialUserReview) {
+                    const { data: existingReview } = await supabase
+                        .from('reviews')
+                        .select('*')
+                        .eq('place_id', place.id)
+                        .eq('user_id', authUser.id)
+                        .maybeSingle();
+
+                    if (existingReview) {
+                        setPersonalReview({
+                            id: existingReview.id,
+                            placeId: existingReview.place_id,
+                            userId: existingReview.user_id,
+                            rating: existingReview.rating,
+                            comment: existingReview.comment,
+                            createdAt: existingReview.created_at
+                        } as any);
+                    }
+                }
+            }
+        };
+
+        fetchUserData();
+    }, [place.id, initialUserReview]);
+
+    const effectiveUserId = user?.id || initialUserId;
+    const effectiveUserReview = personalReview;
 
     return (
         <div className="min-h-screen bg-background pb-12 relative">
@@ -108,7 +149,7 @@ export function PlaceDetailsView({
                                             <span className="mr-1 text-[10px]">✓</span> موثق
                                         </Badge>
                                     )}
-                                    {currentUserId === place.ownerId && (
+                                    {effectiveUserId === place.ownerId && (
                                         <Link
                                             href={`/business/dashboard/${place.id}`}
                                             className="bg-orange-500 hover:bg-orange-600 text-white font-bold px-4 py-1.5 rounded-full text-xs shadow-lg flex items-center gap-1.5 transition-all hover:scale-105"
@@ -345,8 +386,8 @@ export function PlaceDetailsView({
                         placeSlug={place.slug}
                         reviews={reviews}
                         ratingStats={ratingStats}
-                        currentUserId={currentUserId}
-                        userReview={userReview}
+                        currentUserId={effectiveUserId}
+                        userReview={effectiveUserReview}
                     />
                 </div>
 
@@ -378,6 +419,7 @@ export function PlaceDetailsView({
                         placeId={place.id}
                         placeName={place.name}
                         isClaimed={place.isClaimed}
+                        currentUserId={effectiveUserId}
                     />
                 </div>
 

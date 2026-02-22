@@ -56,14 +56,34 @@ export async function incrementViewsBatchAction(events: { tableName: string, id:
     if (isBot || events.length === 0) return { success: true, skipped: 'bot_or_empty' }
 
     try {
-        // For now, we process them in parallel for simplicity, but we could use a single RPC
-        const results = await Promise.allSettled(events.map(event =>
-            incrementViewAction(event.tableName, event.id)
-        ))
+        // Efficient single-trip RPC call
+        const mappedEvents = await Promise.all(events.map(async event => {
+            const entityTypeMap: Record<string, string> = {
+                'places': 'place',
+                'marketplace_items': 'marketplace_item',
+                'categories': 'category',
+                'events': 'event',
+                'articles': 'article',
+                'community_questions': 'community_question'
+            };
+            return {
+                tableName: entityTypeMap[event.tableName] || event.tableName.replace(/s$/, ''),
+                id: event.id,
+                userId: (await supabase.auth.getUser()).data.user?.id || null,
+                ip: (await headers()).get('x-forwarded-for') || '0.0.0.0'
+            };
+        }));
 
-        const failed = results.filter(r => r.status === 'rejected');
-        if (failed.length > 0) {
-            console.error(`Batch partially failed: ${failed.length} errors`);
+        const { error } = await supabase.rpc('log_smart_views_batch', {
+            p_events: mappedEvents
+        });
+
+        if (error) {
+            // Fallback to individual calls if RPC doesn't exist yet
+            console.warn('log_smart_views_batch failed, falling back to individual calls');
+            await Promise.allSettled(events.map(event =>
+                incrementViewAction(event.tableName, event.id)
+            ));
         }
 
         return { success: true, count: events.length }

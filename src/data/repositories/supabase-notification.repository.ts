@@ -173,7 +173,6 @@ export class SupabaseNotificationRepository implements INotificationRepository {
             message: row.message,
             data: row.data || {},
             isRead: row.is_read,
-            readAt: row.read_at, // may be undefined
             createdAt: row.created_at
         };
     }

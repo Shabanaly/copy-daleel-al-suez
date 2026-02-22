@@ -9,7 +9,7 @@ export class SupabaseCategoryRepository implements ICategoryRepository {
         const supabase = (client as import('@supabase/supabase-js').SupabaseClient) || this.supabase;
         let query = supabase
             .from("categories")
-            .select("*")
+            .select("id, name, slug, description, icon, color, sort_order, display_order, is_active")
 
         if (!options?.includeInactive) {
             query = query.eq('is_active', true);
@@ -39,7 +39,7 @@ export class SupabaseCategoryRepository implements ICategoryRepository {
         const supabase = (client as import('@supabase/supabase-js').SupabaseClient) || this.supabase;
         const { data, error } = await supabase
             .from("categories")
-            .select("*")
+            .select("id, name, slug, description, icon, color, sort_order, display_order, is_active")
             .eq("slug", slug)
             .maybeSingle();
 

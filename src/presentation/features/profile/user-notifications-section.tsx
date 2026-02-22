@@ -62,7 +62,6 @@ export function UserNotificationsSection() {
             case 'review_reply':
             case 'message':
                 return <MessageCircle size={18} className="text-blue-500" />
-            case 'alert':
             case 'error':
                 return <AlertCircle size={18} className="text-red-500" />
             default:
@@ -118,8 +117,8 @@ export function UserNotificationsSection() {
                         transition={{ delay: index * 0.05 }}
                         onClick={() => !notification.is_read && handleMarkAsRead(notification.id)}
                         className={`p-4 rounded-xl border transition-all cursor-pointer ${notification.is_read
-                                ? 'bg-card border-border opacity-70'
-                                : 'bg-primary/5 border-primary/20 shadow-sm ring-1 ring-primary/5'
+                            ? 'bg-card border-border opacity-70'
+                            : 'bg-primary/5 border-primary/20 shadow-sm ring-1 ring-primary/5'
                             }`}
                     >
                         <div className="flex gap-4">

@@ -1,10 +1,12 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createReadOnlyClient } from '@/lib/supabase/server'
 import { SupabaseCommunityRepository } from '@/data/repositories/supabase-community.repository'
 import { CommunityCategory, CommunityQuestion } from '@/domain/entities/community-qa'
 import { createNotificationAction } from './notifications.actions'
+import { unstable_cache } from 'next/cache'
+import { cache as reactCache } from 'react'
 
 async function getCommunityRepository() {
     const supabase = await createClient()
@@ -14,8 +16,9 @@ async function getCommunityRepository() {
 export async function getQuestionsAction(filters?: {
     search?: string;
     sortBy?: 'newest' | 'votes' | 'unanswered';
-}) {
-    const repository = await getCommunityRepository()
+}, client?: any) {
+    const supabase = client || await createClient()
+    const repository = new SupabaseCommunityRepository(supabase)
     try {
         return await repository.getQuestions(filters)
     } catch (error) {
@@ -24,15 +27,27 @@ export async function getQuestionsAction(filters?: {
     }
 }
 
-export async function getQuestionByIdAction(id: string) {
-    const repository = await getCommunityRepository()
+export const getQuestionByIdAction = reactCache(async (id: string) => {
+    const supabase = await createReadOnlyClient()
+    const repository = new SupabaseCommunityRepository(supabase)
     try {
         return await repository.getQuestionById(id)
     } catch (error) {
         console.error('getQuestionByIdAction error:', error)
         return null
     }
-}
+})
+
+export const getAnswersAction = reactCache(async (questionId: string) => {
+    const supabase = await createReadOnlyClient()
+    const repository = new SupabaseCommunityRepository(supabase)
+    try {
+        return await repository.getAnswers(questionId)
+    } catch (error) {
+        console.error('getAnswersAction error:', error)
+        return []
+    }
+})
 
 export async function submitQuestionAction(data: {
     content: string;
@@ -53,15 +68,20 @@ export async function submitQuestionAction(data: {
     }
 }
 
-export async function getAnswersAction(questionId: string) {
-    const repository = await getCommunityRepository()
-    try {
-        return await repository.getAnswers(questionId)
-    } catch (error) {
-        console.error('getAnswersAction error:', error)
-        return []
-    }
-}
+// --- Cached Data Wrappers ---
+
+export const getCachedQuestions = unstable_cache(
+    async (filters?: {
+        search?: string;
+        sortBy?: 'newest' | 'votes' | 'unanswered';
+    }) => {
+        const supabase = await createReadOnlyClient()
+        const repository = new SupabaseCommunityRepository(supabase)
+        return await repository.getQuestions(filters)
+    },
+    ['community-questions'],
+    { revalidate: 60, tags: ['community', 'community_questions'] }
+)
 
 export async function submitAnswerAction(questionId: string, body: string) {
     const supabase = await createClient()

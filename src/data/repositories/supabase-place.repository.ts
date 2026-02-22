@@ -6,11 +6,14 @@ import { PlaceMapper } from "../mappers/place.mapper";
 export class SupabasePlaceRepository implements IPlaceRepository {
     constructor(private supabase?: SupabaseClient) { }
 
+    private readonly listFields = "id, name, slug, images, category_id, is_featured, address, rating, view_count, review_count, phone, opens_at, closes_at, opening_hours, categories(name, slug)";
+    private readonly detailFields = "*, categories(name, slug), areas(name, slug, districts(name)), profiles:created_by(full_name)";
+
     async getFeaturedPlaces(client?: unknown): Promise<Place[]> {
         const supabaseClient = (client as import('@supabase/supabase-js').SupabaseClient) || this.supabase;
         const { data, error } = await supabaseClient
             .from("places")
-            .select("*")
+            .select(this.listFields)
             .eq("status", "active")
             .eq("is_featured", true)
             .limit(10);
@@ -21,10 +24,25 @@ export class SupabasePlaceRepository implements IPlaceRepository {
     }
 
     async getTrendingPlaces(limit: number = 8, client?: unknown): Promise<Place[]> {
-        const supabaseClient = (client as import('@supabase/supabase-js').SupabaseClient) || this.supabase;
+        const supabaseClient = (client as SupabaseClient) || this.supabase;
+        if (!supabaseClient) return [];
+
+        // Try newer V2 velocity-based trending if available
+        try {
+            const { data, error } = await supabaseClient
+                .rpc("get_trending_places_v2", { p_limit: limit });
+
+            if (!error && data) {
+                return PlaceMapper.toEntities(data);
+            }
+        } catch (e) {
+            console.warn("RPC get_trending_places_v2 failed, falling back to view_count");
+        }
+
+        // Fallback to legacy view_count based trending
         const { data, error } = await supabaseClient
             .from("places")
-            .select("*")
+            .select(this.listFields)
             .eq("status", "active")
             .order("view_count", { ascending: false })
             .limit(limit);
@@ -37,7 +55,7 @@ export class SupabasePlaceRepository implements IPlaceRepository {
         const supabaseClient = (client as import('@supabase/supabase-js').SupabaseClient) || this.supabase;
         const { data, error } = await supabaseClient
             .from("places")
-            .select("*")
+            .select(this.listFields)
             .eq("status", "active")
             .order("created_at", { ascending: false })
             .limit(limit);
@@ -50,7 +68,7 @@ export class SupabasePlaceRepository implements IPlaceRepository {
         const supabaseClient = (client as import('@supabase/supabase-js').SupabaseClient) || this.supabase;
         const { data, error } = await supabaseClient
             .from("places")
-            .select("*")
+            .select(this.listFields)
             .eq("status", "active")
             .order("rating", { ascending: false })
             .limit(limit);
@@ -73,7 +91,7 @@ export class SupabasePlaceRepository implements IPlaceRepository {
 
         const { data, error } = await supabase
             .from("places")
-            .select("*")
+            .select(this.listFields)
             .eq("status", "active")
             .eq("category_id", category.id);
 
@@ -85,7 +103,7 @@ export class SupabasePlaceRepository implements IPlaceRepository {
         const supabaseClient = (client as import('@supabase/supabase-js').SupabaseClient) || this.supabase;
         const { data, error } = await supabaseClient
             .from("places")
-            .select("*, categories(name, slug), areas(name), profiles:created_by(full_name)")
+            .select(this.detailFields)
             .eq("slug", slug)
             .maybeSingle();
 
@@ -99,9 +117,10 @@ export class SupabasePlaceRepository implements IPlaceRepository {
 
         let dbQuery = supabase
             .from("places")
-            .select("*")
+            .select(this.listFields)
             .eq("status", "active")
-            .ilike("name", `%${query}%`);
+            .ilike("name", `%${query}%`)
+            .limit(20);
 
         if (areaId && areaId !== 'all') {
             dbQuery = dbQuery.eq("area_id", areaId);
@@ -250,7 +269,7 @@ export class SupabasePlaceRepository implements IPlaceRepository {
 
         const { data, error } = await supabase
             .from("places")
-            .select("*")
+            .select(this.detailFields)
             .eq("id", id)
             .maybeSingle();
 
@@ -298,5 +317,39 @@ export class SupabasePlaceRepository implements IPlaceRepository {
 
         if (error) throw new Error(error.message);
         return PlaceMapper.toEntities(data);
+    }
+
+    async getHomepageData(client?: unknown): Promise<{
+        featured: Place[],
+        trending: Place[],
+        latest: Place[],
+        topRated: Place[]
+    }> {
+        const supabase = (client as SupabaseClient) || this.supabase;
+        if (!supabase) return { featured: [], trending: [], latest: [], topRated: [] };
+
+        try {
+            const { data, error } = await supabase.rpc('get_homepage_places_data');
+            if (!error && data) {
+                return {
+                    featured: PlaceMapper.toEntities(data.featured),
+                    trending: PlaceMapper.toEntities(data.trending),
+                    latest: PlaceMapper.toEntities(data.latest),
+                    topRated: PlaceMapper.toEntities(data.topRated)
+                };
+            }
+        } catch (e) {
+            console.warn("RPC get_homepage_places_data failed, falling back to parallel calls");
+        }
+
+        // Parallel fallback if RPC is not available
+        const [featured, trending, latest, topRated] = await Promise.all([
+            this.getFeaturedPlaces(supabase),
+            this.getTrendingPlaces(8, supabase),
+            this.getLatestPlaces(8, supabase),
+            this.getTopRatedPlaces(8, supabase)
+        ]);
+
+        return { featured, trending, latest, topRated };
     }
 }

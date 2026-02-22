@@ -8,9 +8,10 @@ interface PlaceFooterActionsProps {
     placeId: string
     placeName: string
     isClaimed: boolean
+    currentUserId?: string
 }
 
-export function PlaceFooterActions({ placeId, placeName, isClaimed }: PlaceFooterActionsProps) {
+export function PlaceFooterActions({ placeId, placeName, isClaimed, currentUserId }: PlaceFooterActionsProps) {
     const [isClaimModalOpen, setIsClaimModalOpen] = useState(false)
 
     return (

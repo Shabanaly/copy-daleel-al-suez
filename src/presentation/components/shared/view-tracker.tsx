@@ -9,6 +9,7 @@ export const VIEWED_PLACES_KEY = 'daleel_viewed_places'
 export const VIEWED_EVENTS_KEY = 'daleel_viewed_events'
 export const VIEWED_ARTICLES_KEY = 'daleel_viewed_articles'
 export const VIEWED_MARKET_KEY = 'daleel_viewed_items'
+export const VIEWED_COMMUNITY_KEY = 'daleel_viewed_questions'
 
 type TableName = 'categories' | 'places' | 'events' | 'marketplace_items' | 'articles' | 'community_questions'
 
@@ -44,6 +45,8 @@ export function ViewTracker({ tableName, id, categoryId }: ViewTrackerProps) {
             addToLocalStorage(VIEWED_EVENTS_KEY, id)
         } else if (tableName === 'articles') {
             addToLocalStorage(VIEWED_ARTICLES_KEY, id)
+        } else if (tableName === 'community_questions') {
+            addToLocalStorage(VIEWED_COMMUNITY_KEY, id)
         }
     }, [tableName, id, categoryId])
 

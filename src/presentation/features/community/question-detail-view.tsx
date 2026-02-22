@@ -12,15 +12,18 @@ import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
+import { ViewTracker } from "@/presentation/components/shared/view-tracker"
 
 interface QuestionDetailViewProps {
     questionId: string;
+    initialQuestion?: CommunityQuestion;
+    initialAnswers?: CommunityAnswer[];
 }
 
-export function QuestionDetailView({ questionId }: QuestionDetailViewProps) {
-    const [question, setQuestion] = useState<CommunityQuestion | null>(null)
-    const [answers, setAnswers] = useState<CommunityAnswer[]>([])
-    const [loading, setLoading] = useState(true)
+export function QuestionDetailView({ questionId, initialQuestion, initialAnswers = [] }: QuestionDetailViewProps) {
+    const [question, setQuestion] = useState<CommunityQuestion | null>(initialQuestion || null)
+    const [answers, setAnswers] = useState<CommunityAnswer[]>(initialAnswers)
+    const [loading, setLoading] = useState(!initialQuestion)
     const [userId, setUserId] = useState<string | null>(null)
     const [isEditing, setIsEditing] = useState(false)
     const [editContent, setEditContent] = useState("")
@@ -48,7 +51,14 @@ export function QuestionDetailView({ questionId }: QuestionDetailViewProps) {
     }
 
     useEffect(() => {
-        fetchData()
+        if (!initialQuestion) {
+            fetchData()
+        } else {
+            // Just get userId if we already have the data
+            supabase.auth.getUser().then(({ data: { user } }) => {
+                setUserId(user?.id || null)
+            })
+        }
     }, [questionId])
 
     const handleQuestionVote = async () => {
@@ -163,6 +173,8 @@ export function QuestionDetailView({ questionId }: QuestionDetailViewProps) {
                 العودة لأسئلة المجتمع
             </Link>
 
+            <ViewTracker tableName="community_questions" id={questionId} />
+
             <div className="space-y-10">
                 {/* Main Question Card */}
                 <article className="bg-card border border-border rounded-[32px] p-6 md:p-10 shadow-sm relative overflow-hidden">
@@ -178,7 +190,7 @@ export function QuestionDetailView({ questionId }: QuestionDetailViewProps) {
                             </div>
                             <div className="flex items-center gap-1.5 bg-muted/50 px-3 py-1.5 rounded-full">
                                 <Eye size={14} />
-                                <span>{question.views} مشاهدة</span>
+                                <span>{question.view_count} مشاهدة</span>
                             </div>
                         </div>
 

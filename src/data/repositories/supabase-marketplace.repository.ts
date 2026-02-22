@@ -2,13 +2,16 @@ import { MarketplaceItem, MarketplaceItemCondition } from "@/domain/entities/mar
 import { SupabaseClient } from "@supabase/supabase-js";
 
 export class SupabaseMarketplaceRepository {
+    private readonly listFields = "id, slug, title, price, price_type, category, condition, images, location, area_id, seller_id, status, is_featured, view_count, created_at, expires_at, last_bump_at, profiles:seller_id(full_name, avatar_url, phone), areas(name, districts(name))";
+    private readonly detailFields = "*, profiles:seller_id(full_name, avatar_url, phone, created_at), areas(name, districts(name))";
+
     constructor(private supabase: SupabaseClient) { }
 
     async getItems(filters?: any, limit: number = 20, offset: number = 0): Promise<{ items: MarketplaceItem[], count: number }> {
         const supabase = this.supabase;
         if (!supabase) return { items: [], count: 0 };
 
-        let selectFields = "id, slug, title, price, price_type, category, condition, images, location, area_id, seller_id, status, is_featured, view_count, created_at, expires_at, last_bump_at, profiles:seller_id(full_name, avatar_url, phone), areas(name, districts(name))";
+        let selectFields = this.listFields;
 
         if (filters?.districtId) {
             selectFields = "id, slug, title, price, price_type, category, condition, images, location, area_id, seller_id, status, is_featured, view_count, created_at, expires_at, last_bump_at, profiles:seller_id(full_name, avatar_url, phone), areas!inner(name, district_id, districts(name))";
@@ -64,7 +67,7 @@ export class SupabaseMarketplaceRepository {
     async getItemById(id: string): Promise<MarketplaceItem | null> {
         const { data, error } = await this.supabase
             .from("marketplace_items")
-            .select("*, profiles:seller_id(full_name, avatar_url, phone)")
+            .select(this.detailFields)
             .eq("id", id)
             .single();
 
@@ -76,7 +79,7 @@ export class SupabaseMarketplaceRepository {
         // 1. Try by slug
         const { data, error } = await this.supabase
             .from("marketplace_items")
-            .select("*, profiles:seller_id(full_name, avatar_url, phone)")
+            .select(this.detailFields)
             .eq("slug", slug)
             .maybeSingle();
 
@@ -304,7 +307,7 @@ export class SupabaseMarketplaceRepository {
 
         const { data, error } = await supabase
             .from("marketplace_items")
-            .select("*")
+            .select(this.listFields)
             .eq("seller_id", userId)
             .neq("status", "removed")
             .order("created_at", { ascending: false });
@@ -351,7 +354,7 @@ export class SupabaseMarketplaceRepository {
 
         let query = supabase
             .from('marketplace_items')
-            .select('*')
+            .select(this.listFields)
             .eq('status', 'active');
 
         if (sortType === 'most_viewed') {
@@ -370,7 +373,7 @@ export class SupabaseMarketplaceRepository {
 
         const { data: featured } = await supabase
             .from('marketplace_items')
-            .select('*')
+            .select(this.listFields)
             .eq('status', 'active')
             .eq('is_featured', true)
             .limit(2);
@@ -382,7 +385,7 @@ export class SupabaseMarketplaceRepository {
 
         const { data: randomPool } = await supabase
             .from('marketplace_items')
-            .select('*')
+            .select(this.listFields)
             .eq('status', 'active')
             .eq('is_featured', false)
             .order('created_at', { ascending: false })
@@ -418,7 +421,7 @@ export class SupabaseMarketplaceRepository {
 
         const { data, error } = await supabase
             .from("marketplace_items")
-            .select("*, profiles:seller_id(full_name, avatar_url, phone, is_verified_phone, is_verified_email)")
+            .select(this.listFields)
             .eq("seller_id", sellerId)
             .eq("status", "active")
             .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)

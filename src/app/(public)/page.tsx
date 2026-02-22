@@ -1,31 +1,32 @@
 import { HomeView } from "@/presentation/features/home-view";
 import {
-  getFeaturedPlacesUseCase,
-  getTrendingPlacesUseCase,
-  getLatestPlacesUseCase,
-  getTopRatedPlacesUseCase,
   getCategoriesUseCase,
   getActiveEventsUseCase,
   getLatestArticlesUseCase
 } from "@/di/modules";
-import { createClient } from "@/lib/supabase/server";
+import { createReadOnlyClient } from "@/lib/supabase/server";
 import { getWeatherData } from "@/actions/weather.actions";
 import { getPrayerTimes } from "@/actions/prayer.actions";
 import { getDynamicHeroSuggestions } from "@/actions/category.actions";
 import { getActiveCityPulseItems } from "@/actions/city-pulse.actions";
 import { getQuestionsAction } from "@/actions/community.actions";
+import {
+  getCachedHomepageData,
+  getCachedActiveEventsAction
+} from "@/app/actions/get-categories-with-places";
+import { getCachedHomeAds } from "@/actions/marketplace.actions";
+import { getCachedActiveCityPulseItems } from "@/actions/city-pulse.actions";
 
 export const revalidate = 3600; // Revalidate every hour
 
 export default async function Home() {
-  const supabase = await createClient()
+  const supabase = await createReadOnlyClient()
 
-  // Fetch all specialized place sets in parallel
+  // 1. Fetch consolidated place data (Featured, Trending, Latest, Top Rated) in 1 request
+  const homepagePlaces = await getCachedHomepageData();
+
+  // 2. Fetch other components in parallel
   const [
-    featuredPlaces,
-    trendingPlaces,
-    latestPlaces,
-    topRatedPlaces,
     categories,
     events,
     latestArticles,
@@ -35,26 +36,25 @@ export default async function Home() {
     pulseItems,
     communityQuestions,
   ] = await Promise.all([
-    getFeaturedPlacesUseCase.execute(supabase),
-    getTrendingPlacesUseCase.execute(6, supabase),
-    getLatestPlacesUseCase.execute(6, supabase),
-    getTopRatedPlacesUseCase.execute(6, supabase),
     getCategoriesUseCase.execute(undefined, supabase),
-    getActiveEventsUseCase.execute(undefined, supabase),
+    getCachedActiveEventsAction(),
     getLatestArticlesUseCase.execute(3, supabase),
     getWeatherData(),
     getPrayerTimes(),
     getDynamicHeroSuggestions(),
-    getActiveCityPulseItems(),
+    getCachedActiveCityPulseItems(),
     getQuestionsAction({ sortBy: 'newest' }).then(qs => qs.slice(0, 3)),
   ])
 
+  // 3. Fetch Marketplace ads (separate or part of consolidated)
+  const marketplaceAds = await getCachedHomeAds(6);
+
   return (
     <HomeView
-      featuredPlaces={featuredPlaces}
-      trendingPlaces={trendingPlaces}
-      latestPlaces={latestPlaces}
-      topRatedPlaces={topRatedPlaces}
+      featuredPlaces={homepagePlaces.featured}
+      trendingPlaces={homepagePlaces.trending}
+      latestPlaces={homepagePlaces.latest}
+      topRatedPlaces={homepagePlaces.topRated}
       categories={categories}
       events={events}
       latestArticles={latestArticles}
@@ -63,6 +63,7 @@ export default async function Home() {
       heroSuggestions={heroSuggestions}
       pulseItems={pulseItems}
       communityQuestions={communityQuestions}
+      marketplaceAds={marketplaceAds}
     />
   );
 }

@@ -1,12 +1,17 @@
 import { notFound } from "next/navigation";
 import { PlaceDetailsView } from "@/presentation/features/place-details-view";
 import { getPlaceBySlugUseCase, getPlaceReviewsUseCase, getPlaceRatingStatsUseCase } from "@/di/modules";
-import { createClient } from "@/lib/supabase/server";
+import { createReadOnlyClient } from "@/lib/supabase/server";
 import { Metadata } from "next";
 import { PlaceMapper } from "@/data/mappers/place.mapper";
+import { cache } from "react";
 
-export const dynamic = 'force-dynamic';
 export const revalidate = 3600;
+
+// Deduplicate DB call between generateMetadata and Page
+const getCachedPlace = cache(async (slug: string, supabase: any) => {
+    return await getPlaceBySlugUseCase.execute(slug, supabase);
+});
 
 type Props = {
     params: Promise<{ slug: string }>
@@ -14,8 +19,8 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const { slug } = await params;
-    const supabase = await createClient();
-    const place = await getPlaceBySlugUseCase.execute(slug, supabase);
+    const supabase = await createReadOnlyClient();
+    const place = await getCachedPlace(slug, supabase);
 
     if (!place) {
         return {
@@ -54,10 +59,10 @@ export default async function PlaceDetailsPage({
     params,
 }: Props) {
     const { slug } = await params;
-    const supabase = await createClient()
+    const supabase = await createReadOnlyClient()
 
     // 1. Get place details
-    const place = await getPlaceBySlugUseCase.execute(slug, supabase);
+    const place = await getCachedPlace(slug, supabase);
 
     if (!place) {
         notFound();
@@ -88,47 +93,20 @@ export default async function PlaceDetailsPage({
         } : undefined,
     }
 
-    // 2. Get current user (if logged in)
-    const { data: { user } } = await supabase.auth.getUser()
-
-    // 3. Fetch reviews and stats
-    const [reviews, ratingStats] = await Promise.all([
-        getPlaceReviewsUseCase.execute(place.id, user?.id, supabase),
-        getPlaceRatingStatsUseCase.execute(place.id, supabase)
+    // 2. Fetch public data in parallel using Static/ReadOnly Client
+    const [reviews, ratingStats, relatedPlacesData] = await Promise.all([
+        getPlaceReviewsUseCase.execute(place.id, undefined, supabase),
+        getPlaceRatingStatsUseCase.execute(place.id, supabase),
+        supabase
+            .from('places')
+            .select("id, name, slug, images, category_id, address, rating, categories(name)")
+            .eq('category_id', place.categoryId)
+            .eq('status', 'active')
+            .neq('id', place.id)
+            .limit(4)
     ])
 
-    // 4. Get user's review if logged in
-    let userReview = null
-    if (user) {
-        const { data: existingReview } = await supabase
-            .from('reviews')
-            .select('*')
-            .eq('place_id', place.id)
-            .eq('user_id', user.id)
-            .maybeSingle()
-
-        if (existingReview) {
-            userReview = {
-                id: existingReview.id,
-                placeId: existingReview.place_id,
-                userId: existingReview.user_id,
-                rating: existingReview.rating,
-                comment: existingReview.comment,
-                createdAt: existingReview.created_at
-            } as any
-        }
-    }
-
-    // 5. Fetch related places from same category
-    const { data: relatedPlacesData } = await supabase
-        .from('places')
-        .select('*, categories(name), areas(name)')
-        .eq('category_id', place.categoryId)
-        .eq('status', 'active')
-        .neq('id', place.id)
-        .limit(4)
-
-    const related = PlaceMapper.toEntities(relatedPlacesData);
+    const related = PlaceMapper.toEntities(relatedPlacesData.data);
 
     return (
         <>
@@ -141,8 +119,8 @@ export default async function PlaceDetailsPage({
                 relatedPlaces={related}
                 reviews={reviews}
                 ratingStats={ratingStats}
-                currentUserId={user?.id}
-                userReview={userReview}
+            // Notice: currentUserId and userReview are omitted here
+            // They will be fetched client-side inside PlaceDetailsView
             />
         </>
     );

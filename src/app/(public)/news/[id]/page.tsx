@@ -11,13 +11,13 @@ interface PageProps {
     };
 }
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600;
 
-import { createClient } from "@/lib/supabase/server";
+import { createReadOnlyClient } from "@/lib/supabase/server";
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
     const { id } = await params;
-    const supabase = await createClient();
+    const supabase = await createReadOnlyClient();
     const article = await getArticleByIdUseCase.execute(id, supabase);
 
     if (!article) {
@@ -60,7 +60,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function ArticleDetailsPage({ params }: PageProps) {
     const { id } = await params;
-    const supabase = await createClient();
+    const supabase = await createReadOnlyClient();
     const article = await getArticleByIdUseCase.execute(id, supabase);
 
     if (!article || !article.is_published) {

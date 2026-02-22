@@ -1,8 +1,9 @@
 'use server'
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createReadOnlyClient } from "@/lib/supabase/server";
 import { CityPulseItem } from "@/domain/entities/city-pulse-item";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, unstable_cache } from "next/cache";
+import { cache as reactCache } from "react";
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -27,9 +28,9 @@ function mapRow(row: any): CityPulseItem {
  * Returns only the items that are currently active & within their time window.
  * Ordered by priority DESC then created_at DESC.
  */
-export async function getActiveCityPulseItems(): Promise<CityPulseItem[]> {
+export const getActiveCityPulseItems = reactCache(async (): Promise<CityPulseItem[]> => {
     try {
-        const supabase = await createClient();
+        const supabase = await createReadOnlyClient();
         const now = new Date().toISOString();
 
         const { data, error } = await supabase
@@ -52,7 +53,15 @@ export async function getActiveCityPulseItems(): Promise<CityPulseItem[]> {
         console.error('[CityPulse] unexpected error:', err);
         return [];
     }
-}
+})
+
+export const getCachedActiveCityPulseItems = unstable_cache(
+    async () => {
+        return await getActiveCityPulseItems();
+    },
+    ['active-city-pulse'],
+    { revalidate: 900, tags: ['city-pulse'] } // 15 minutes as requested
+)
 
 // ─── Admin: full CRUD ─────────────────────────────────────────────────────────
 

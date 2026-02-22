@@ -1,7 +1,10 @@
 import { QuestionDetailView } from "@/presentation/features/community/question-detail-view";
 import { Metadata } from "next";
+import { getQuestionByIdAction, getAnswersAction } from "@/actions/community.actions";
 
-import { getQuestionByIdAction } from "@/actions/community.actions";
+type Props = {
+    params: Promise<{ id: string }>
+}
 
 export async function generateMetadata(
     { params }: Props
@@ -34,16 +37,24 @@ export async function generateMetadata(
     };
 }
 
-type Props = {
-    params: Promise<{ id: string }>
-}
+
 
 export default async function QuestionDetailPage({ params }: Props) {
     const { id } = await params;
 
+    // Prefetch on server
+    const [question, answers] = await Promise.all([
+        getQuestionByIdAction(id),
+        getAnswersAction(id)
+    ]);
+
     return (
         <main className="min-h-screen bg-background/50">
-            <QuestionDetailView questionId={id} />
+            <QuestionDetailView
+                questionId={id}
+                initialQuestion={question || undefined}
+                initialAnswers={answers}
+            />
         </main>
     );
 }

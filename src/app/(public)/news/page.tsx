@@ -3,10 +3,10 @@ import { ArticleCard } from "@/presentation/features/news/article-card";
 
 export const revalidate = 3600; // 1 hour
 
-import { createClient } from "@/lib/supabase/server";
+import { createReadOnlyClient } from "@/lib/supabase/server";
 
 export default async function NewsPage() {
-    const supabase = await createClient();
+    const supabase = await createReadOnlyClient();
     const articles = await getArticlesUseCase.execute(50, 0, supabase); // Fetch latest 50 for now
 
     return (

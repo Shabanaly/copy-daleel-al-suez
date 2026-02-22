@@ -13,6 +13,7 @@ import { FeaturedEventsCarousel } from "./events/featured-events-carousel";
 import { HomeNewsSection } from "./news/home-news-section";
 import { Article } from "@/domain/entities/article";
 import { CommunityQuestion } from "@/domain/entities/community-qa";
+import { MarketplaceItem } from "@/domain/entities/marketplace-item";
 import { CommunityHomeSection } from "./home-view/components/community-home-section";
 import { UnifiedInfoStrip } from "@/presentation/components/home/unified-info-strip";
 import { LatestAdsSection } from "@/presentation/components/marketplace/latest-ads-section";
@@ -61,6 +62,7 @@ interface HomeViewProps {
     heroSuggestions?: HeroSuggestion[];
     pulseItems?: CityPulseItem[];
     communityQuestions?: CommunityQuestion[];
+    marketplaceAds?: MarketplaceItem[];
 }
 
 export function HomeView({
@@ -76,6 +78,7 @@ export function HomeView({
     heroSuggestions = [],
     pulseItems = [],
     communityQuestions = [],
+    marketplaceAds = [],
 }: HomeViewProps) {
     const { personalizationLevel, recommendations } = useSmartLogic();
     const [hasMounted, setHasMounted] = useState(false);
@@ -182,12 +185,12 @@ export function HomeView({
             <RecentlyViewedSection />
 
             {/* Smart: Personalized Recommendations based on Spy Engine */}
-            <div className="mt-16">
+            <div className="mt-8">
                 <PersonalizedSection />
             </div>
 
             {/* Smart Sections - Dynamically Ordered */}
-            <div className="space-y-20 mt-16">
+            <div className="space-y-10 md:space-y-12 mt-8">
                 {sections.map((section: { id: string, content: React.ReactNode }) => section.content)}
 
                 {/* Upcoming Events Grid */}
@@ -226,9 +229,9 @@ export function HomeView({
                 </HorizontalScroll>
 
                 {/* Latest Marketplace Ads - The Bridge */}
-                <LatestAdsSection />
+                <LatestAdsSection initialItems={marketplaceAds} />
 
-                <div className="pt-8">
+                <div className="py-2">
                     <HomeNewsSection articles={latestArticles} />
                 </div>
 

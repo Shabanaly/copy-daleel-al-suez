@@ -46,19 +46,6 @@ export class SupabaseCommunityRepository {
             .maybeSingle();
 
         if (error || !data) return null;
-
-        // Increment view count (smartly)
-        const { data: { user } } = await supabase.auth.getUser();
-        const { error: rpcError } = await supabase.rpc('increment_view_count', {
-            p_table_name: 'community_questions',
-            p_row_id: id,
-            p_user_id: user?.id
-        });
-
-        if (rpcError) {
-            console.error('[Repository] increment_view_count error:', rpcError);
-        }
-
         return this.mapToQuestionEntity(data);
     }
 
@@ -145,7 +132,7 @@ export class SupabaseCommunityRepository {
             id: row.id,
             content: row.content,
             user_id: row.user_id,
-            views: row.views,
+            view_count: row.view_count,
             answers_count: row.answers_count,
             votes_count: row.votes_count,
             accepted_answer_id: row.accepted_answer_id,

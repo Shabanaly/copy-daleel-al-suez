@@ -15,13 +15,22 @@ END $$;
 
 -- 2. Create more efficient index for de-duplication checks
 CREATE INDEX IF NOT EXISTS idx_engagement_logs_dedup 
-ON engagement_logs (item_id, event_type, created_at DESC) 
+ON engagement_logs (entity_id, event_type, created_at DESC) 
 WHERE event_type = 'view';
 
--- 3. Smart View Function
--- This function handles de-duplication at the database level
+-- Normalization: Rename views to view_count if it exists
+DO $$ 
+BEGIN 
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='community_questions' AND column_name='views') THEN
+        ALTER TABLE community_questions RENAME COLUMN views TO view_count;
+    END IF;
+END $$;
+
+-- Smart View Function
+-- This function handles de-duplication at the database level for all entities
 CREATE OR REPLACE FUNCTION log_smart_view(
-    p_item_id uuid,
+    p_entity_id uuid,
+    p_entity_type text,
     p_user_id uuid DEFAULT NULL,
     p_session_id text DEFAULT NULL,
     p_ip_address text DEFAULT NULL
@@ -29,17 +38,32 @@ CREATE OR REPLACE FUNCTION log_smart_view(
 RETURNS boolean AS $$
 DECLARE
     v_already_viewed boolean;
+    v_table_name text;
 BEGIN
+    -- Map entity type to table name
+    v_table_name := CASE 
+        WHEN p_entity_type = 'place' THEN 'places'
+        WHEN p_entity_type = 'marketplace_item' THEN 'marketplace_items'
+        WHEN p_entity_type = 'event' THEN 'events'
+        WHEN p_entity_type = 'article' THEN 'articles'
+        WHEN p_entity_type = 'community_question' THEN 'community_questions'
+        WHEN p_entity_type = 'category' THEN 'categories'
+        ELSE p_entity_type || 's'
+    END;
+
     -- Check if this specific user/session viewed this item in the last 24 hours
     SELECT EXISTS (
         SELECT 1 FROM engagement_logs
-        WHERE item_id = p_item_id
+        WHERE entity_id = p_entity_id
+        AND entity_type = p_entity_type
         AND event_type = 'view'
         AND created_at > now() - interval '24 hours'
         AND (
             (p_user_id IS NOT NULL AND user_id = p_user_id)
             OR 
             (p_session_id IS NOT NULL AND session_id = p_session_id)
+            OR
+            (p_user_id IS NULL AND p_session_id IS NULL AND p_ip_address IS NOT NULL AND ip_address = p_ip_address)
         )
     ) INTO v_already_viewed;
 
@@ -48,13 +72,12 @@ BEGIN
     END IF;
 
     -- Log the view
-    INSERT INTO engagement_logs (item_id, user_id, session_id, ip_address, event_type)
-    VALUES (p_item_id, p_user_id, p_session_id, p_ip_address, 'view');
+    INSERT INTO engagement_logs (entity_id, entity_type, user_id, session_id, ip_address, event_type)
+    VALUES (p_entity_id, p_entity_type, p_user_id, p_session_id, p_ip_address, 'view');
 
-    -- Increment the main counter
-    UPDATE marketplace_items 
-    SET view_count = COALESCE(view_count, 0) + 1 
-    WHERE id = p_item_id;
+    -- Increment the main counter (Now standardized to view_count)
+    EXECUTE format('UPDATE %I SET view_count = COALESCE(view_count, 0) + 1 WHERE id = $1', v_table_name)
+    USING p_entity_id;
 
     RETURN true; -- New view recorded
 END;

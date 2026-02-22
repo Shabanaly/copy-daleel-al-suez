@@ -6,10 +6,10 @@ import { isPast, isFuture } from 'date-fns'
 
 export const revalidate = 900; // 15 mins
 
-import { createClient } from '@/lib/supabase/server'
+import { createReadOnlyClient } from '@/lib/supabase/server'
 
 export default async function EventsPage() {
-    const supabase = await createClient()
+    const supabase = await createReadOnlyClient()
     const events = await getActiveEventsUseCase.execute(undefined, supabase)
 
     // Filter live events (started but not ended) for carousel

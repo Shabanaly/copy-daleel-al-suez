@@ -1,31 +1,27 @@
 import { SupabaseMarketplaceRepository } from '@/data/repositories/supabase-marketplace.repository';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { MapPin, Clock, Phone, MessageCircle, Share2, Shield, ArrowRight, Pencil, Trash2, Eye } from 'lucide-react';
-import { FormField } from '@/presentation/components/marketplace/dynamic-form-builder';
-import { SellerControls } from '@/presentation/components/marketplace/seller-controls';
+import { MapPin, Clock, Shield, ArrowRight } from 'lucide-react';
 import { MarketplaceImageGallery } from '@/presentation/features/marketplace/components/marketplace-image-gallery';
-import { getFieldsForItem, MARKETPLACE_FORMS } from '@/config/marketplace-forms';
+import { MARKETPLACE_FORMS } from '@/config/marketplace-forms';
 import { ViewTracker } from '@/presentation/components/shared/view-tracker';
 import { MarketplaceItemDetails } from '@/presentation/components/marketplace/marketplace-item-details';
 import { RelatedItems } from '@/presentation/components/marketplace/related-items';
 import { FavoriteButton } from '@/presentation/features/places/components/favorite-button';
-import { ReportDialog } from '@/presentation/components/marketplace/report-dialog';
-import { createClient } from '@/lib/supabase/server';
-import { ContactSellerButtons } from '@/presentation/components/marketplace/contact-seller-buttons';
-import type { Metadata } from 'next';
-
+import { createReadOnlyClient } from '@/lib/supabase/server';
+import { MarketplaceSellerActions } from '@/presentation/components/marketplace/marketplace-seller-actions';
+import { MarketplaceReportAction } from '@/presentation/components/marketplace/marketplace-report-action';
 import { ItemViewTracker } from '@/presentation/components/marketplace/item-view-tracker';
+import type { Metadata } from 'next';
+import { getCachedMarketplaceItem, getCachedMarketplaceItems } from '@/actions/marketplace.actions';
 
 export const revalidate = 120; // ISR: إعادة التحقق كل دقيقتين
 
 // ========== SEO Metadata ==========
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
-    const supabase = await createClient();
-    const repository = new SupabaseMarketplaceRepository(supabase);
     const { slug } = await params;
-    const item = await repository.getItemBySlug(slug);
+    const item = await getCachedMarketplaceItem(slug);
 
     if (!item) {
         return {
@@ -59,25 +55,17 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 // ========== Page ==========
 
 export default async function MarketplaceItemPage({ params }: { params: Promise<{ slug: string }> }) {
-    const supabase = await createClient();
-    const repository = new SupabaseMarketplaceRepository(supabase);
     const { slug } = await params;
-    const item = await repository.getItemBySlug(slug);
+    const item = await getCachedMarketplaceItem(slug);
 
     if (!item) {
         notFound();
     }
 
-    const { data: { user } } = await supabase.auth.getUser();
-    const isOwner = user?.id === item.seller_id;
-
-    // Get form fields from code-based config
-    const formConfig: FormField[] = getFieldsForItem(item.category, item.attributes || {});
-
-    // Fetch related items (same category, excluding current item)
-    const { items: relatedItems } = await repository.getItems(
+    // Fetch related items (same category, excluding current item) in parallel
+    const { items: relatedItems } = await getCachedMarketplaceItems(
         { category: item.category as any },
-        4, // limit
+        5, // limit slightly more to filter current
         0  // offset
     );
     const filteredRelated = relatedItems.filter(r => r.id !== item.id).slice(0, 4);
@@ -188,20 +176,7 @@ export default async function MarketplaceItemPage({ params }: { params: Promise<
                                 </div>
                             </div>
 
-                            {!isOwner && (
-                                <ContactSellerButtons
-                                    itemId={item.id}
-                                    itemTitle={item.title}
-                                    itemSlug={item.slug || item.id}
-                                    category={item.category}
-                                    sellerPhone={item.seller_phone}
-                                    sellerWhatsapp={item.seller_whatsapp}
-                                />
-                            )}
-
-                            {isOwner && (
-                                <SellerControls itemId={item.id} item={item} />
-                            )}
+                            <MarketplaceSellerActions item={item as any} />
                         </div>
 
                         {/* Safety Tips */}
@@ -216,11 +191,7 @@ export default async function MarketplaceItemPage({ params }: { params: Promise<
                                 <li>لا تدفع أي مبالغ قبل الاستلام.</li>
                             </ul>
 
-                            {!isOwner && (
-                                <div className="pt-2 border-t border-primary/20">
-                                    <ReportDialog itemId={item.id} />
-                                </div>
-                            )}
+                            <MarketplaceReportAction itemId={item.id} sellerId={item.seller_id} />
                         </div>
                     </div>
                 </div>

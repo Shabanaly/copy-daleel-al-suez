@@ -141,23 +141,33 @@ export class SupabaseReviewRepository implements IReviewRepository {
         const supabase = (client as SupabaseClient) || this.supabase;
         if (!supabase) throw new Error("Supabase client not initialized");
 
-        const { data, error } = await supabase
+        // 1. Try to use optimized RPC for DB-side aggregation (recommended for scale)
+        try {
+            const { data: stats, error: rpcError } = await supabase.rpc('get_place_rating_stats', { p_place_id: placeId });
+            if (!rpcError && stats) {
+                return stats as ReviewStats;
+            }
+        } catch (e) {
+            console.warn("RPC get_place_rating_stats failed, falling back to in-memory aggregation");
+        }
+
+        // 2. Fallback to in-memory aggregation if RPC is not installed
+        const { data: reviews, error } = await supabase
             .from('reviews')
             .select('rating')
             .eq('place_id', placeId)
 
         if (error) throw new Error(error.message)
 
-        const reviews = data as { rating: number }[]
-        const count = reviews.length
-        const totalRating = reviews.reduce((sum, r) => sum + r.rating, 0)
+        const count = reviews?.length || 0;
+        const totalRating = (reviews || []).reduce((sum, r) => sum + r.rating, 0)
         const average = count > 0 ? totalRating / count : 0
 
         const distribution = {
             1: 0, 2: 0, 3: 0, 4: 0, 5: 0
         }
 
-        reviews.forEach(r => {
+        reviews?.forEach(r => {
             const rating = r.rating as 1 | 2 | 3 | 4 | 5
             if (distribution[rating] !== undefined) {
                 distribution[rating]++

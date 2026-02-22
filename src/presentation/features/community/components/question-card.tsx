@@ -71,7 +71,7 @@ export function QuestionCard({ question, index }: QuestionCardProps) {
                                 </div>
                                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                                     <Eye size={14} />
-                                    <span>{question.views}</span>
+                                    <span>{question.view_count}</span>
                                 </div>
                             </div>
 

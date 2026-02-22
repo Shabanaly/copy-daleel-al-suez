@@ -10,9 +10,13 @@ import { Button } from "@/presentation/ui/button"
 import { Search, Plus, MessageSquare, Loader2, Info } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 
-export function CommunityView() {
-    const [questions, setQuestions] = useState<CommunityQuestion[]>([])
-    const [loading, setLoading] = useState(true)
+interface CommunityViewProps {
+    initialQuestions?: CommunityQuestion[];
+}
+
+export function CommunityView({ initialQuestions = [] }: CommunityViewProps) {
+    const [questions, setQuestions] = useState<CommunityQuestion[]>(initialQuestions)
+    const [loading, setLoading] = useState(initialQuestions.length === 0)
     const [searchQuery, setSearchQuery] = useState("")
     const [isAskModalOpen, setIsAskModalOpen] = useState(false)
 

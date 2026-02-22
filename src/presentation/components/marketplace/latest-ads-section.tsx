@@ -10,12 +10,14 @@ import { MarketplaceCardSkeleton } from '@/presentation/components/marketplace/m
 import { cn } from '@/lib/utils'
 import { HorizontalScroll } from '@/presentation/components/shared/ui/horizontal-scroll'
 
-export function LatestAdsSection() {
-    const [items, setItems] = useState<MarketplaceItem[]>([])
-    const [loading, setLoading] = useState(true)
+export function LatestAdsSection({ initialItems = [] }: { initialItems?: MarketplaceItem[] }) {
+    const [items, setItems] = useState<MarketplaceItem[]>(initialItems)
+    const [loading, setLoading] = useState(initialItems.length === 0)
     const [sortType, setSortType] = useState<'random' | 'most_viewed' | 'lowest_price'>('random')
 
     useEffect(() => {
+        if (initialItems.length > 0) return;
+
         // Randomly pick a focus logic for this mount
         const types: ('random' | 'most_viewed' | 'lowest_price')[] = ['random', 'most_viewed', 'lowest_price']
         const picked = types[Math.floor(Math.random() * types.length)]
@@ -63,7 +65,7 @@ export function LatestAdsSection() {
     const header = getSectionHeader();
 
     return (
-        <section className="py-12 bg-muted/30">
+        <section className="py-6 bg-muted/30">
             <div className="container mx-auto px-4">
                 {/* Content - Horizontal Scroll Container */}
                 <HorizontalScroll

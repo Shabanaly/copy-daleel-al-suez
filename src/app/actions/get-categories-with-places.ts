@@ -4,6 +4,7 @@ import { createReadOnlyClient } from '@/lib/supabase/server'
 import { Category } from '@/domain/entities/category'
 import { Place } from '@/domain/entities/place'
 import { unstable_cache } from 'next/cache'
+import { placeRepository } from '@/di/modules'
 
 export interface CategoryWithPlaces extends Category {
     places: Place[]
@@ -18,11 +19,42 @@ interface GetCategoriesWithPlacesResponse {
 async function fetchCategoriesWithPlacesFromDB(offset: number, limit: number): Promise<GetCategoriesWithPlacesResponse> {
     const supabase = await createReadOnlyClient()
 
-    // 1. Get total count of active categories that actually HAVE places
-    // We'll filter in JS because complex subquery counts in Supabase can be tricky with the current schema
-    // But for total pagination count, we need a reliable number.
+    try {
+        // Use the new N+1 fix RPC
+        const { data, error } = await supabase.rpc('get_categories_with_top_places', { p_limit: 8 });
 
-    // 1. Get all active categories with all necessary fields
+        if (!error && data) {
+            const processedCategories = data.map((cat: any) => ({
+                id: cat.category_id,
+                name: cat.category_name,
+                slug: cat.category_slug,
+                description: cat.category_description,
+                icon: cat.category_icon,
+                color: cat.category_color,
+                places: (cat.top_places || []).map((p: any) => ({
+                    id: p.id,
+                    name: p.name,
+                    slug: p.slug,
+                    images: p.images || [],
+                    rating: p.rating || 0,
+                    address: p.address
+                })) as Place[],
+                placesCount: Number(cat.places_count) || 0
+            }));
+
+            const nonEmptyCategories = processedCategories.filter((cat: any) => cat.placesCount > 0);
+            const paginatedCategories = nonEmptyCategories.slice(offset, offset + limit);
+
+            return {
+                categories: paginatedCategories as CategoryWithPlaces[],
+                total: nonEmptyCategories.length
+            };
+        }
+    } catch (e) {
+        console.warn("RPC get_categories_with_top_places failed, falling back to legacy N+1 logic");
+    }
+
+    // --- LEGACY FALLBACK (Slow N+1) ---
     const { data: allCategories, error: catError } = await supabase
         .from('categories')
         .select('*')
@@ -31,7 +63,6 @@ async function fetchCategoriesWithPlacesFromDB(offset: number, limit: number): P
 
     if (catError) throw catError
 
-    // 2. For each category, get the count and top 8 places
     const processedCategories = await Promise.all(
         allCategories.map(async (cat) => {
             const { data: placesData, count } = await supabase
@@ -49,37 +80,24 @@ async function fetchCategoriesWithPlacesFromDB(offset: number, limit: number): P
                 description: cat.description,
                 icon: cat.icon,
                 color: cat.color,
-                sortOrder: cat.sort_order || 0,
-                displayOrder: cat.display_order,
-                isActive: cat.is_active,
-                createdAt: cat.created_at,
-                updatedAt: cat.updated_at,
                 places: (placesData || []).map((record: any) => ({
                     id: record.id,
                     name: record.name,
                     slug: record.slug,
-                    description: record.description,
-                    address: record.address,
                     images: record.images || [],
                     rating: record.rating || 0,
-                    reviewCount: record.review_count || 0,
-                    viewCount: record.view_count || 0,
-                    createdAt: record.created_at,
-                    categoryId: record.category_id,
+                    address: record.address,
                 })) as Place[],
                 placesCount: count || 0
             }
         })
     )
 
-    // 3. Filter out empty ones
     const nonEmptyCategories = processedCategories.filter(cat => cat.placesCount > 0)
-
-    // 4. Manual pagination on the non-empty categories
     const paginatedCategories = nonEmptyCategories.slice(offset, offset + limit)
 
     return {
-        categories: paginatedCategories,
+        categories: paginatedCategories as CategoryWithPlaces[],
         total: nonEmptyCategories.length
     }
 }
@@ -93,8 +111,64 @@ const getCachedCategoriesWithPlaces = unstable_cache(
     }
 )
 
+// --- Cached Repository Wrappers ---
+
+export const getCachedFeaturedPlaces = unstable_cache(
+    async () => {
+        const supabase = await createReadOnlyClient();
+        return await placeRepository.getFeaturedPlaces(supabase);
+    },
+    ['featured-places'],
+    { revalidate: 3600, tags: ['places'] }
+);
+
+export const getCachedTrendingPlaces = unstable_cache(
+    async (limit: number) => {
+        const supabase = await createReadOnlyClient();
+        return await placeRepository.getTrendingPlaces(limit, supabase);
+    },
+    ['trending-places'],
+    { revalidate: 3600, tags: ['places', 'user_events'] }
+);
+
+export const getCachedLatestPlaces = unstable_cache(
+    async (limit: number) => {
+        const supabase = await createReadOnlyClient();
+        return await placeRepository.getLatestPlaces(limit, supabase);
+    },
+    ['latest-places'],
+    { revalidate: 3600, tags: ['places'] }
+);
+
+export const getCachedTopRatedPlaces = unstable_cache(
+    async (limit: number) => {
+        const supabase = await createReadOnlyClient();
+        return await placeRepository.getTopRatedPlaces(limit, supabase);
+    },
+    ['top-rated-places'],
+    { revalidate: 3600, tags: ['places'] }
+);
+
+export const getCachedHomepageData = unstable_cache(
+    async () => {
+        const supabase = await createReadOnlyClient();
+        return await placeRepository.getHomepageData(supabase);
+    },
+    ['homepage-consolidated-data'],
+    { revalidate: 3600, tags: ['places', 'user_events'] }
+);
+
+export const getCachedActiveEventsAction = unstable_cache(
+    async (limit: number = 10) => {
+        const supabase = await createReadOnlyClient();
+        const { eventRepository } = await import('@/di/modules');
+        return await eventRepository.getEvents({ status: 'active', limit }, supabase);
+    },
+    ['active-events-home'],
+    { revalidate: 3600, tags: ['events'] }
+);
+
 export async function getCategoriesWithPlacesAction(offset: number, limit: number) {
-    // We only cache the first page to keep it snappy
     if (offset === 0) {
         return getCachedCategoriesWithPlaces(offset, limit)
     }

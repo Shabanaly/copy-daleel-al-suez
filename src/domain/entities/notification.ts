@@ -5,13 +5,10 @@ export type NotificationType =
     | 'marketplace_approve'
     | 'marketplace_reject'
     | 'marketplace_update'
-    | 'lead_generation'
-    | 'bump_alert'
     | 'review_reply'
-    | 'queue_update'
-    | 'deal_alert'
+    | 'community_answer'
+    | 'community_accept'
     | 'answer_accepted'
-    | 'new_follower'
     | 'place_update'
     | 'system';
 
@@ -24,7 +21,6 @@ export interface Notification {
     data?: any;
 
     isRead: boolean;
-    readAt?: string;
     createdAt: string;
 }
 
