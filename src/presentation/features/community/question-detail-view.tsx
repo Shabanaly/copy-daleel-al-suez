@@ -1,16 +1,17 @@
 'use client'
 
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 import { CommunityQuestion, CommunityAnswer } from "@/domain/entities/community-qa"
-import { getQuestionByIdAction, getAnswersAction, voteAction, acceptAnswerAction } from "@/actions/community.actions"
+import { getQuestionByIdAction, getAnswersAction, voteAction, acceptAnswerAction, deleteQuestionAction, updateQuestionAction, deleteAnswerAction } from "@/actions/community.actions"
 import { AnswerItem } from "./components/answer-item"
 import { AnswerForm } from "./components/answer-form"
 import { Button } from "@/presentation/ui/button"
 import { motion, AnimatePresence } from "framer-motion"
-import { ThumbsUp, MessageSquare, Eye, Clock, ChevronLeft, User, ShieldCheck, Loader2 } from "lucide-react"
+import { ThumbsUp, MessageSquare, Eye, Clock, ChevronLeft, User, Loader2, Pencil, Trash2, X, Check, ShieldCheck } from "lucide-react"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
+import { useRouter } from "next/navigation"
 
 interface QuestionDetailViewProps {
     questionId: string;
@@ -21,7 +22,11 @@ export function QuestionDetailView({ questionId }: QuestionDetailViewProps) {
     const [answers, setAnswers] = useState<CommunityAnswer[]>([])
     const [loading, setLoading] = useState(true)
     const [userId, setUserId] = useState<string | null>(null)
+    const [isEditing, setIsEditing] = useState(false)
+    const [editContent, setEditContent] = useState("")
+    const [submitting, setSubmitting] = useState(false)
     const supabase = createClient()
+    const router = useRouter()
 
     const fetchData = async () => {
         setLoading(true)
@@ -34,6 +39,7 @@ export function QuestionDetailView({ questionId }: QuestionDetailViewProps) {
             setQuestion(q)
             setAnswers(a)
             setUserId(user?.id || null)
+            if (q) setEditContent(q.content)
         } catch (error) {
             console.error("Fetch question detail error:", error)
         } finally {
@@ -52,7 +58,10 @@ export function QuestionDetailView({ questionId }: QuestionDetailViewProps) {
         }
         try {
             await voteAction('question', questionId, 'upvote')
-            setQuestion(prev => prev ? { ...prev, upvote_count: prev.upvote_count + 1 } : null)
+            const updatedQuestion = await getQuestionByIdAction(questionId)
+            if (updatedQuestion) {
+                setQuestion(updatedQuestion)
+            }
         } catch (error) {
             toast.error("فشل التصويت")
         }
@@ -65,6 +74,59 @@ export function QuestionDetailView({ questionId }: QuestionDetailViewProps) {
             fetchData()
         } catch (error) {
             toast.error("فشل تنفيذ العملية")
+        }
+    }
+
+    const handleDeleteQuestion = async () => {
+        if (!window.confirm("هل أنت متأكد من حذف هذا السؤال؟")) return
+
+        try {
+            await deleteQuestionAction(questionId)
+            toast.success("تم حذف السؤال بنجاح")
+            router.push("/community")
+        } catch (error) {
+            toast.error("فشل حذف السؤال")
+        }
+    }
+
+    const handleUpdateQuestion = async () => {
+        if (!editContent.trim()) {
+            toast.error("يرجى كتابة محتوى السؤال")
+            return
+        }
+
+        setSubmitting(true)
+        try {
+            await updateQuestionAction(questionId, {
+                content: editContent
+            })
+            toast.success("تم تحديث السؤال")
+            setIsEditing(false)
+            fetchData()
+        } catch (error) {
+            toast.error("فشل تحديث السؤال")
+        } finally {
+            setSubmitting(false)
+        }
+    }
+
+    const handleDeleteAnswer = async (answerId: string) => {
+        if (!window.confirm("هل أنت متأكد من حذف هذه الإجابة؟")) return
+
+        try {
+            const res = await deleteAnswerAction(questionId, answerId)
+            if (res.success) {
+                toast.success("تم حذف الإجابة")
+                setAnswers(prev => prev.filter(a => a.id !== answerId))
+                // Optionally refresh question to update answer count
+                const updatedQuestion = await getQuestionByIdAction(questionId)
+                if (updatedQuestion) setQuestion(updatedQuestion)
+            } else {
+                throw new Error("Failed")
+            }
+        } catch (error) {
+            toast.error("فشل حذف الإجابة")
+            fetchData()
         }
     }
 
@@ -116,46 +178,91 @@ export function QuestionDetailView({ questionId }: QuestionDetailViewProps) {
                             </div>
                             <div className="flex items-center gap-1.5 bg-muted/50 px-3 py-1.5 rounded-full">
                                 <Eye size={14} />
-                                <span>{question.view_count} مشاهدة</span>
+                                <span>{question.views} مشاهدة</span>
                             </div>
                         </div>
 
-                        {/* Title & Body */}
+                        {/* Content */}
                         <div className="space-y-6">
-                            <h1 className="text-2xl md:text-3xl font-black text-foreground leading-tight">
-                                {question.title}
-                            </h1>
-                            <div className="text-lg leading-relaxed text-foreground/80 whitespace-pre-wrap">
-                                {question.body}
-                            </div>
+                            {isEditing ? (
+                                <div className="space-y-4">
+                                    <textarea
+                                        value={editContent}
+                                        onChange={(e) => setEditContent(e.target.value)}
+                                        className="w-full bg-background border border-border rounded-xl px-4 py-4 min-h-[150px] text-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                        placeholder="ما هو سؤالك؟"
+                                    />
+                                    <div className="flex gap-2">
+                                        <Button
+                                            onClick={handleUpdateQuestion}
+                                            disabled={submitting}
+                                            className="rounded-xl gap-2"
+                                        >
+                                            {submitting ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                                            حفظ التعديلات
+                                        </Button>
+                                        <Button
+                                            onClick={() => setIsEditing(false)}
+                                            variant="outline"
+                                            className="rounded-xl gap-2"
+                                        >
+                                            <X size={16} />
+                                            إلغاء
+                                        </Button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <h1 className="text-2xl md:text-3xl font-black text-foreground leading-tight whitespace-pre-wrap">
+                                    {question.content.endsWith('؟') || question.content.endsWith('?') ? question.content : `${question.content}؟`}
+                                </h1>
+                            )}
                         </div>
 
-                        {/* Author & Tags */}
+                        {/* Author */}
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pt-8 border-t border-border/50">
                             <div className="flex items-center gap-3">
                                 <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
                                     <User className="text-primary" />
                                 </div>
                                 <div>
-                                    <p className="text-sm font-bold">مستخدم دليل السويس</p>
+                                    <div className="flex items-center gap-1.5">
+                                        <p className="text-sm font-bold">{question.author?.full_name || 'مستخدم دليل السويس'}</p>
+                                        {(question.author?.role === 'admin' || question.author?.role === 'super_admin') && (
+                                            <span className="flex items-center gap-0.5 text-[10px] bg-secondary/10 text-secondary px-2 py-0.5 rounded-full border border-secondary/20 font-bold">
+                                                <ShieldCheck size={12} className="fill-secondary/10" />
+                                                الإدارة
+                                            </span>
+                                        )}
+                                    </div>
                                     <p className="text-[10px] text-muted-foreground">عضو في المجتمع</p>
                                 </div>
-                                {isQuestionOwner && (
-                                    <span className="text-[10px] bg-primary/10 text-primary font-bold px-2 py-0.5 rounded-full">
-                                        سؤالك
-                                    </span>
+                                {isQuestionOwner && !isEditing && (
+                                    <div className="flex items-center gap-2 mr-4">
+                                        <span className="text-[10px] bg-primary/10 text-primary font-bold px-2 py-0.5 rounded-full ml-2">
+                                            سؤالك
+                                        </span>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="w-8 h-8 rounded-full hover:bg-primary/5 hover:text-primary transition-colors"
+                                            onClick={() => {
+                                                setEditContent(question.content)
+                                                setIsEditing(true)
+                                            }}
+                                        >
+                                            <Pencil size={14} />
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="w-8 h-8 rounded-full hover:bg-destructive/5 hover:text-destructive transition-colors"
+                                            onClick={handleDeleteQuestion}
+                                        >
+                                            <Trash2 size={14} />
+                                        </Button>
+                                    </div>
                                 )}
                             </div>
-
-                            {question.tags && question.tags.length > 0 && (
-                                <div className="flex flex-wrap gap-2">
-                                    {question.tags.map(tag => (
-                                        <span key={tag} className="text-xs bg-muted/50 text-muted-foreground px-3 py-1 rounded-lg">
-                                            #{tag}
-                                        </span>
-                                    ))}
-                                </div>
-                            )}
                         </div>
 
                         {/* Voting Button */}
@@ -163,10 +270,10 @@ export function QuestionDetailView({ questionId }: QuestionDetailViewProps) {
                             <Button
                                 onClick={handleQuestionVote}
                                 variant="outline"
-                                className={`rounded-full h-14 px-8 font-bold gap-3 transition-all ${question.upvote_count > 0 ? 'bg-primary/5 border-primary/20 text-primary' : 'hover:border-primary/30'}`}
+                                className={`rounded-full h-14 px-8 font-bold gap-3 transition-all ${question.votes_count > 0 ? 'bg-primary/5 border-primary/20 text-primary' : 'hover:border-primary/30'}`}
                             >
-                                <ThumbsUp size={20} className={question.upvote_count > 0 ? 'fill-primary/20' : ''} />
-                                <span className="text-lg">{question.upvote_count}</span>
+                                <ThumbsUp size={20} className={question.votes_count > 0 ? 'fill-primary/20' : ''} />
+                                <span className="text-lg">{question.votes_count}</span>
                                 <span>أؤيد هذا السؤال</span>
                             </Button>
                         </div>
@@ -188,8 +295,10 @@ export function QuestionDetailView({ questionId }: QuestionDetailViewProps) {
                                 <AnswerItem
                                     key={answer.id}
                                     answer={answer}
-                                    isOwner={isQuestionOwner}
+                                    isQuestionOwner={isQuestionOwner}
+                                    currentUserId={userId}
                                     onAccept={() => handleAcceptAnswer(answer.id)}
+                                    onDelete={() => handleDeleteAnswer(answer.id)}
                                 />
                             ))}
                         </AnimatePresence>

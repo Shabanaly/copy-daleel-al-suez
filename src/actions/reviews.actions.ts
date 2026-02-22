@@ -4,10 +4,6 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { CreateReviewDTO } from '@/domain/entities/review'
 import { SupabaseReviewRepository } from '@/data/repositories/supabase-review.repository'
-import { CreateReviewUseCase } from '@/domain/use-cases/reviews/create-review.usecase'
-import { UpdateReviewUseCase } from '@/domain/use-cases/reviews/update-review.usecase'
-import { DeleteReviewUseCase } from '@/domain/use-cases/reviews/delete-review.usecase'
-import { GetUserReviewsUseCase } from '@/domain/use-cases/reviews/get-user-reviews.usecase'
 
 // Helper to create use cases with authenticated client
 async function getAuthenticatedUseCases() {
@@ -19,29 +15,26 @@ async function getAuthenticatedUseCases() {
 
     return {
         user,
-        createReviewUseCase: new CreateReviewUseCase(reviewRepository),
-        updateReviewUseCase: new UpdateReviewUseCase(reviewRepository),
-        deleteReviewUseCase: new DeleteReviewUseCase(reviewRepository),
-        getUserReviewsUseCase: new GetUserReviewsUseCase(reviewRepository),
+        reviewRepository,
     }
 }
 
 export async function getUserReviewsAction() {
-    const { user, getUserReviewsUseCase } = await getAuthenticatedUseCases()
+    const { user, reviewRepository } = await getAuthenticatedUseCases()
 
     if (!user) {
         throw new Error('يجب تسجيل الدخول')
     }
 
     try {
-        return await getUserReviewsUseCase.execute(user.id)
+        return await reviewRepository.getReviewsByUser(user.id)
     } catch (error) {
         throw new Error(error instanceof Error ? error.message : 'فشل جلب التقييمات')
     }
 }
 
 export async function createReviewAction(placeId: string, placeSlug: string, data: Omit<CreateReviewDTO, 'placeId'>) {
-    const { user, createReviewUseCase } = await getAuthenticatedUseCases()
+    const { user, reviewRepository } = await getAuthenticatedUseCases()
 
     if (!user) {
         throw new Error('يجب تسجيل الدخول لكتابة تقييم')
@@ -51,7 +44,7 @@ export async function createReviewAction(placeId: string, placeSlug: string, dat
     const userAvatar = user.user_metadata?.avatar_url || user.user_metadata?.picture
 
     try {
-        await createReviewUseCase.execute({
+        await reviewRepository.createReview({
             placeId,
             userId: user.id,
             userName,
@@ -70,14 +63,14 @@ export async function createReviewAction(placeId: string, placeSlug: string, dat
 }
 
 export async function updateReviewAction(reviewId: string, placeSlug: string, data: Partial<CreateReviewDTO>) {
-    const { user, updateReviewUseCase } = await getAuthenticatedUseCases()
+    const { user, reviewRepository } = await getAuthenticatedUseCases()
 
     if (!user) {
         throw new Error('يجب تسجيل الدخول')
     }
 
     try {
-        await updateReviewUseCase.execute(reviewId, data)
+        await reviewRepository.updateReview(reviewId, data)
 
         revalidatePath(`/places/${placeSlug}`)
 
@@ -88,14 +81,14 @@ export async function updateReviewAction(reviewId: string, placeSlug: string, da
 }
 
 export async function deleteReviewAction(reviewId: string, placeSlug: string) {
-    const { user, deleteReviewUseCase } = await getAuthenticatedUseCases()
+    const { user, reviewRepository } = await getAuthenticatedUseCases()
 
     if (!user) {
         throw new Error('يجب تسجيل الدخول')
     }
 
     try {
-        await deleteReviewUseCase.execute(reviewId)
+        await reviewRepository.deleteReview(reviewId)
 
         revalidatePath(`/places/${placeSlug}`)
         revalidatePath('/places')

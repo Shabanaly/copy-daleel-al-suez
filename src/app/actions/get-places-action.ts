@@ -113,10 +113,3 @@ export async function getPlacesAction(params: GetPlacesParams) {
     return fetchPlacesFromDB(params)
 }
 
-/**
- * Legacy support for category-only fetching
- * @deprecated Use getPlacesAction instead
- */
-export async function getPlacesByCategoryAction(categoryId: string, lastCursor?: string, limit: number = ITEMS_PER_PAGE) {
-    return getPlacesAction({ categoryId, lastCursor, limit });
-}

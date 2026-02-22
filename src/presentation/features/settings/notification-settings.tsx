@@ -96,14 +96,14 @@ export function NotificationSettings() {
                             title="البريد الإلكتروني"
                             description="استلام ملخصات أسبوعية وتحديثات هامة عبر البريد الإلكتروني"
                             checked={preferences?.email_notifications || false}
-                            onCheckedChange={(val) => handleToggle('email_notifications', val)}
+                            onCheckedChange={(val: boolean) => handleToggle('email_notifications', val)}
                         />
                         <NotificationToggle
                             icon={Smartphone}
                             title="إشعارات التطبيق"
                             description="الحصول على تنبيهات فورية على جهازك عند حدوث أي تفاعل"
                             checked={preferences?.push_notifications || false}
-                            onCheckedChange={(val) => handleToggle('push_notifications', val)}
+                            onCheckedChange={(val: boolean) => handleToggle('push_notifications', val)}
                         />
                     </div>
                 </section>
@@ -116,31 +116,31 @@ export function NotificationSettings() {
                             title="مراجعات جديدة"
                             description="عندما يضيف مستخدم آخر مراجعة لصورة أو مكان في مفضلتك"
                             checked={preferences?.notify_new_reviews || false}
-                            onCheckedChange={(val) => handleToggle('notify_new_reviews', val)}
+                            onCheckedChange={(val: boolean) => handleToggle('notify_new_reviews', val)}
                         />
                         <NotificationToggle
                             title="الردود على مراجعاتك"
                             description="تنبيهك عندما يتم الرد على أحد مراجعاتك من قبل صاحب المكان أو المستخدمين"
                             checked={preferences?.notify_review_replies || false}
-                            onCheckedChange={(val) => handleToggle('notify_review_replies', val)}
+                            onCheckedChange={(val: boolean) => handleToggle('notify_review_replies', val)}
                         />
                         <NotificationToggle
                             title="تحديثات الأماكن المفضلة"
                             description="عند تغيير ساعات العمل أو إضافة خدمات جديدة للأماكن التي تتابعها"
                             checked={preferences?.notify_favorite_updates || false}
-                            onCheckedChange={(val) => handleToggle('notify_favorite_updates', val)}
+                            onCheckedChange={(val: boolean) => handleToggle('notify_favorite_updates', val)}
                         />
                         <NotificationToggle
                             title="أمان الحساب"
                             description="تنبيهات تسجيل الدخول من أجهزة جديدة أو تغيير كلمة المرور"
                             checked={preferences?.notify_account_changes || false}
-                            onCheckedChange={(val) => handleToggle('notify_account_changes', val)}
+                            onCheckedChange={(val: boolean) => handleToggle('notify_account_changes', val)}
                         />
                         <NotificationToggle
                             title="العروض والأخبار"
                             description="آخر العروض الحصرية والفعاليات القادمة في السويس"
                             checked={preferences?.notify_marketing || false}
-                            onCheckedChange={(val) => handleToggle('notify_marketing', val)}
+                            onCheckedChange={(val: boolean) => handleToggle('notify_marketing', val)}
                         />
                     </div>
                 </section>

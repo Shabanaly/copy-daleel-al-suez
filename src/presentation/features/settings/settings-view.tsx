@@ -20,10 +20,9 @@ import { ProfileSettings } from './profile-settings'
 import { SecuritySettings } from './security-settings'
 import { DisplaySettings } from './display-settings'
 import { NotificationSettings } from './notification-settings'
-import { SupportSettings } from './support-settings'
 import { PrivacySettings } from './privacy-settings'
 
-type SettingCategory = 'profile' | 'security' | 'display' | 'notifications' | 'privacy' | 'support'
+type SettingCategory = 'profile' | 'security' | 'display' | 'notifications' | 'privacy'
 
 interface SettingsViewProps {
     user: SupabaseUser
@@ -44,7 +43,6 @@ export function SettingsView({ user, profile }: SettingsViewProps) {
         { id: 'display' as const, label: 'المظهر واللغة', icon: Palette, color: 'text-pink-500', bg: 'bg-pink-500/10' },
         { id: 'notifications' as const, label: 'الإشعارات', icon: BellRing, color: 'text-orange-500', bg: 'bg-orange-500/10' },
         { id: 'privacy' as const, label: 'الخصوصية والظهور', icon: Eye, color: 'text-teal-500', bg: 'bg-teal-500/10' },
-        { id: 'support' as const, label: 'الدعم والمساعدة', icon: HelpCircle, color: 'text-green-500', bg: 'bg-green-500/10' },
     ]
 
     const handleCategoryClick = (id: SettingCategory) => {
@@ -213,7 +211,6 @@ export function SettingsView({ user, profile }: SettingsViewProps) {
                                     {activeCategory === 'display' && <DisplaySettings theme={theme} setTheme={setTheme} />}
                                     {activeCategory === 'notifications' && <NotificationSettings />}
                                     {activeCategory === 'privacy' && <PrivacySettings />}
-                                    {activeCategory === 'support' && <SupportSettings />}
                                 </motion.div>
                             </AnimatePresence>
                         </div>

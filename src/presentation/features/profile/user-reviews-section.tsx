@@ -95,7 +95,6 @@ export function UserReviewsSection() {
                                 </span>
                             </div>
 
-                            {review.title && <h4 className="font-bold text-foreground mb-1">{review.title}</h4>}
                             <p className="text-muted-foreground text-sm leading-relaxed">{review.comment}</p>
                         </div>
 

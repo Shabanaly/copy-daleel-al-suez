@@ -37,7 +37,6 @@ export function ProfileContent() {
     const searchParams = useSearchParams()
     const supabase = createClient()
 
-    const ticketIdParam = searchParams.get('ticketId')
 
     useEffect(() => {
         const tabParam = searchParams.get('tab')
@@ -78,7 +77,6 @@ export function ProfileContent() {
         getUser()
     }, [router, supabase])
 
-    // Removed support ticket fetching
 
     const handleSignOut = async () => {
         await supabase.auth.signOut()
@@ -96,7 +94,8 @@ export function ProfileContent() {
 
     if (!user) return null
 
-    const isAdmin = profile?.role === 'admin'
+    const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin'
+    const adminHref = profile?.role === 'super_admin' ? '/admin' : '/content-admin'
 
     const tabs: (TabItem<TabType> & { component: React.ReactNode })[] = [
         { id: 'overview', label: 'نظرة عامة', icon: User, component: <OverviewSection user={user} isAdmin={isAdmin} /> },
@@ -272,7 +271,7 @@ export function ProfileContent() {
 
                         {isAdmin && (
                             <Link
-                                href="/admin"
+                                href={adminHref}
                                 className="flex items-center gap-3 p-4 bg-card hover:bg-accent border border-border hover:border-primary/30 rounded-2xl transition-all group shadow-sm"
                             >
                                 <div className="p-3 bg-gradient-to-br from-indigo-500/20 to-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-xl group-hover:scale-110 transition-transform">
@@ -330,7 +329,7 @@ export function ProfileContent() {
 
                         {isAdmin && (
                             <Link
-                                href="/admin"
+                                href={adminHref}
                                 className="flex items-center gap-3 p-4 bg-card hover:bg-accent border border-border hover:border-primary/30 rounded-2xl transition-all group shadow-sm hover:shadow-md"
                             >
                                 <div className="p-3 bg-gradient-to-br from-indigo-500/20 to-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-xl group-hover:scale-110 transition-transform">

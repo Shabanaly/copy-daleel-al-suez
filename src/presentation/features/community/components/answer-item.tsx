@@ -1,25 +1,30 @@
 'use client'
 
 import { CommunityAnswer } from "@/domain/entities/community-qa"
-import { ThumbsUp, CheckCircle, User, Clock } from "lucide-react"
+import { ThumbsUp, CheckCircle, User, Clock, Trash2, Loader2, ShieldCheck } from "lucide-react"
 import { motion } from "framer-motion"
 import { voteAction } from "@/actions/community.actions"
 import { useState } from "react"
 import { toast } from "sonner"
+import { Button } from "@/presentation/ui/button"
 
 interface AnswerItemProps {
     answer: CommunityAnswer;
-    isOwner: boolean;
+    isQuestionOwner: boolean;
+    currentUserId: string | null;
     onAccept?: () => void;
+    onDelete?: () => void;
 }
 
-export function AnswerItem({ answer, isOwner, onAccept }: AnswerItemProps) {
-    const [votes, setVotes] = useState(answer.upvote_count)
+export function AnswerItem({ answer, isQuestionOwner, currentUserId, onAccept, onDelete }: AnswerItemProps) {
+    const [isDeleting, setIsDeleting] = useState(false)
+    const [votes, setVotes] = useState(answer.votes_count)
 
     const handleVote = async () => {
         try {
             await voteAction('answer', answer.id, 'upvote')
-            setVotes(prev => prev + 1)
+            // Refresh logic usually handled by parent refresh
+            toast.success("تم تحديث تصويتك")
         } catch (error) {
             toast.error("يجب تسجيل الدخول للتصويت")
         }
@@ -51,7 +56,15 @@ export function AnswerItem({ answer, isOwner, onAccept }: AnswerItemProps) {
                                 <User size={16} className="text-muted-foreground" />
                             </div>
                             <div>
-                                <p className="text-xs font-bold">مستخدم دليل السويس</p>
+                                <div className="flex items-center gap-1.5">
+                                    <p className="text-xs font-bold">{answer.author?.full_name || 'مستخدم دليل السويس'}</p>
+                                    {(answer.author?.role === 'admin' || answer.author?.role === 'super_admin') && (
+                                        <span className="flex items-center gap-0.5 text-[9px] bg-secondary/10 text-secondary px-1.5 py-0.5 rounded-full border border-secondary/20 font-bold">
+                                            <ShieldCheck size={10} className="fill-secondary/10" />
+                                            الإدارة
+                                        </span>
+                                    )}
+                                </div>
                                 <p className="text-[10px] text-muted-foreground">
                                     {new Date(answer.created_at).toLocaleDateString('ar-EG')}
                                 </p>
@@ -64,13 +77,25 @@ export function AnswerItem({ answer, isOwner, onAccept }: AnswerItemProps) {
                                 إجابة مقبولة
                             </div>
                         )}
+
+                        {answer.user_id === currentUserId && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={onDelete}
+                                className="text-destructive hover:text-destructive hover:bg-destructive/5 h-8 w-8 rounded-full p-0"
+                                title="حذف الإجابة"
+                            >
+                                <Trash2 size={14} />
+                            </Button>
+                        )}
                     </div>
 
                     <div className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
-                        {answer.body}
+                        {answer.content}
                     </div>
 
-                    {isOwner && !answer.is_accepted && (
+                    {isQuestionOwner && !answer.is_accepted && (
                         <Button
                             variant="ghost"
                             size="sm"
@@ -86,5 +111,3 @@ export function AnswerItem({ answer, isOwner, onAccept }: AnswerItemProps) {
         </motion.div>
     )
 }
-
-import { Button } from "@/presentation/ui/button"

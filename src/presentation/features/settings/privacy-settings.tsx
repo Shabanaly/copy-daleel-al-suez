@@ -3,8 +3,37 @@
 import { Eye, Shield, Globe, Lock, Info, Check } from 'lucide-react'
 import { Switch } from '@/presentation/ui/switch'
 import { cn } from '@/lib/utils'
+import { useState, useEffect } from 'react'
+import { toggleCommunityPrivacyAction, getProfilePrivacyAction } from '@/actions/profile-privacy.actions'
+import { toast } from 'sonner'
 
 export function PrivacySettings() {
+    const [showName, setShowName] = useState(true)
+    const [loading, setLoading] = useState(true)
+
+    useEffect(() => {
+        async function loadPrivacy() {
+            const res = await getProfilePrivacyAction()
+            if (res.success && res.data !== null) {
+                setShowName(res.data as boolean)
+            }
+            setLoading(false)
+        }
+        loadPrivacy()
+    }, [])
+
+    const handleToggleCommunityPrivacy = async (checked: boolean) => {
+        const previous = showName
+        setShowName(checked)
+        try {
+            await toggleCommunityPrivacyAction(checked)
+            toast.success("تم تحديث إعدادات الخصوصية")
+        } catch (error) {
+            setShowName(previous)
+            toast.error("فشل التحديث")
+        }
+    }
+
     return (
         <div className="space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-500">
             <header className="space-y-1">
@@ -19,9 +48,11 @@ export function PrivacySettings() {
                     <div className="bg-card border border-border/60 rounded-3xl overflow-hidden shadow-sm divide-y divide-border/40">
                         <PrivacyToggle
                             icon={Eye}
-                            title="ملف شخصي عام"
-                            description="السماح للمستخدمين الآخرين بالعثور عليك ورؤية مراجعاتك وصورك العامة"
-                            checked={true}
+                            title="ظهور الاسم في المجتمع"
+                            description="إظهار اسمك الحقيقي عند طرح الأسئلة أو الإجابة عليها. إذا تم الإيقاف سيظهر اسم 'مستخدم دليل السويس'"
+                            checked={showName}
+                            onChange={handleToggleCommunityPrivacy}
+                            disabled={loading}
                         />
                         <PrivacyToggle
                             icon={Globe}
@@ -74,9 +105,12 @@ export function PrivacySettings() {
     )
 }
 
-function PrivacyToggle({ icon: Icon, title, description, checked }: any) {
+function PrivacyToggle({ icon: Icon, title, description, checked, onChange, disabled }: any) {
     return (
-        <label className="flex items-center justify-between p-6 hover:bg-muted/30 transition-colors cursor-pointer group">
+        <label className={cn(
+            "flex items-center justify-between p-6 hover:bg-muted/30 transition-colors cursor-pointer group",
+            disabled && "opacity-50 cursor-not-allowed"
+        )}>
             <div className="flex items-start gap-4">
                 <div className="w-10 h-10 rounded-xl bg-primary/5 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
                     <Icon size={20} />
@@ -88,6 +122,8 @@ function PrivacyToggle({ icon: Icon, title, description, checked }: any) {
             </div>
             <Switch
                 checked={checked}
+                onCheckedChange={onChange}
+                disabled={disabled}
                 className="data-[state=checked]:bg-primary"
             />
         </label>

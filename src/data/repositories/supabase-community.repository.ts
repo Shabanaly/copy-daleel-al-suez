@@ -6,9 +6,7 @@ export class SupabaseCommunityRepository {
 
     // Questions
     async getQuestions(filters?: {
-        category?: CommunityCategory;
         search?: string;
-        tag?: string;
         sortBy?: 'newest' | 'votes' | 'unanswered';
     }, client?: unknown): Promise<CommunityQuestion[]> {
         const supabase = (client as SupabaseClient) || this.supabase;
@@ -16,26 +14,17 @@ export class SupabaseCommunityRepository {
 
         let query = supabase
             .from("community_questions")
-            .select("*, profiles:user_id(full_name, avatar_url)")
-            .eq("is_closed", false);
-
-        if (filters?.category) {
-            query = query.eq("category", filters.category);
-        }
-
-        if (filters?.tag) {
-            query = query.contains("tags", [filters.tag]);
-        }
+            .select("*, profiles:user_id(full_name, avatar_url, role, show_name_in_community)");
 
         if (filters?.search) {
-            query = query.or(`title.ilike.%${filters.search}%,body.ilike.%${filters.search}%`);
+            query = query.ilike('content', `%${filters.search}%`);
         }
 
         // Sorting
         if (filters?.sortBy === 'votes') {
-            query = query.order("upvote_count", { ascending: false });
+            query = query.order("votes_count", { ascending: false });
         } else if (filters?.sortBy === 'unanswered') {
-            query = query.eq("answer_count", 0).order("created_at", { ascending: false });
+            query = query.eq("answers_count", 0).order("created_at", { ascending: false });
         } else {
             query = query.order("created_at", { ascending: false });
         }
@@ -52,14 +41,23 @@ export class SupabaseCommunityRepository {
 
         const { data, error } = await supabase
             .from("community_questions")
-            .select("*, profiles:user_id(full_name, avatar_url)")
+            .select("*, profiles:user_id(full_name, avatar_url, role, show_name_in_community)")
             .eq("id", id)
             .maybeSingle();
 
         if (error || !data) return null;
 
-        // Increment view count
-        supabase.rpc('increment_view_count', { table_name: 'community_questions', row_id: id });
+        // Increment view count (smartly)
+        const { data: { user } } = await supabase.auth.getUser();
+        const { error: rpcError } = await supabase.rpc('increment_view_count', {
+            p_table_name: 'community_questions',
+            p_row_id: id,
+            p_user_id: user?.id
+        });
+
+        if (rpcError) {
+            console.error('[Repository] increment_view_count error:', rpcError);
+        }
 
         return this.mapToQuestionEntity(data);
     }
@@ -71,10 +69,7 @@ export class SupabaseCommunityRepository {
         const { data, error } = await supabase
             .from("community_questions")
             .insert({
-                title: question.title,
-                body: question.body,
-                category: question.category,
-                tags: question.tags,
+                content: question.content,
                 user_id: userId
             })
             .select()
@@ -91,16 +86,16 @@ export class SupabaseCommunityRepository {
 
         const { data, error } = await supabase
             .from("community_answers")
-            .select("*, profiles:user_id(full_name, avatar_url)")
+            .select("*, profiles:user_id(full_name, avatar_url, role, show_name_in_community)")
             .eq("question_id", questionId)
             .order("is_accepted", { ascending: false }) // Accepted first
-            .order("upvote_count", { ascending: false });
+            .order("votes_count", { ascending: false });
 
         if (error) throw new Error(error.message);
         return data.map((row: any) => this.mapToAnswerEntity(row));
     }
 
-    async createAnswer(questionId: string, body: string, userId: string, client?: unknown): Promise<CommunityAnswer> {
+    async createAnswer(questionId: string, content: string, userId: string, client?: unknown): Promise<CommunityAnswer> {
         const supabase = (client as SupabaseClient) || this.supabase;
         if (!supabase) throw new Error("Supabase client not initialized");
 
@@ -108,7 +103,7 @@ export class SupabaseCommunityRepository {
             .from("community_answers")
             .insert({
                 question_id: questionId,
-                body: body,
+                content: content,
                 user_id: userId
             })
             .select()
@@ -148,23 +143,18 @@ export class SupabaseCommunityRepository {
     private mapToQuestionEntity(row: any): CommunityQuestion {
         return {
             id: row.id,
-            title: row.title,
-            body: row.body,
-            category: row.category,
-            tags: row.tags || [],
+            content: row.content,
             user_id: row.user_id,
-            view_count: row.view_count,
-            answer_count: row.answer_count,
-            upvote_count: row.upvote_count,
-            has_accepted_answer: row.has_accepted_answer,
+            views: row.views,
+            answers_count: row.answers_count,
+            votes_count: row.votes_count,
             accepted_answer_id: row.accepted_answer_id,
-            is_closed: row.is_closed,
-            is_flagged: row.is_flagged,
             created_at: row.created_at,
             updated_at: row.updated_at,
             author: row.profiles ? {
-                full_name: row.profiles.full_name,
-                avatar_url: row.profiles.avatar_url
+                full_name: row.profiles.show_name_in_community !== false ? row.profiles.full_name : "مستخدم دليل السويس",
+                avatar_url: row.profiles.show_name_in_community !== false ? row.profiles.avatar_url : undefined,
+                role: row.profiles.role
             } : undefined
         };
     }
@@ -174,16 +164,96 @@ export class SupabaseCommunityRepository {
             id: row.id,
             question_id: row.question_id,
             user_id: row.user_id,
-            body: row.body,
-            upvote_count: row.upvote_count,
+            content: row.content,
+            votes_count: row.votes_count,
             is_accepted: row.is_accepted,
-            is_flagged: row.is_flagged,
             created_at: row.created_at,
             updated_at: row.updated_at,
             author: row.profiles ? {
                 full_name: row.profiles.full_name,
-                avatar_url: row.profiles.avatar_url
+                avatar_url: row.profiles.avatar_url,
+                role: row.profiles.role
             } : undefined
         };
+    }
+
+    async updateQuestion(id: string, userId: string, updates: { content?: string }): Promise<void> {
+        if (!this.supabase) return;
+
+        const { error } = await this.supabase
+            .from("community_questions")
+            .update(updates)
+            .eq("id", id)
+            .eq("user_id", userId);
+
+        if (error) throw error;
+    }
+
+    async deleteQuestion(id: string, userId: string): Promise<void> {
+        if (!this.supabase) return;
+
+        console.log(`[Repository] Attempting to delete question: ${id} for user: ${userId}`);
+
+        const { data, error } = await this.supabase
+            .from("community_questions")
+            .delete()
+            .eq("id", id)
+            .select();
+
+        if (error) {
+            console.error('[Repository] deleteQuestion error:', error);
+            throw error;
+        }
+
+        if (!data || data.length === 0) {
+            console.warn('[Repository] deleteQuestion: No rows affected. Check RLS or IDs.');
+            throw new Error("لم يتم العثور على السؤال أو لا تملك صلاحية حذفه");
+        }
+
+        console.log('[Repository] deleteQuestion success:', data);
+    }
+
+    async deleteAnswer(id: string, userId: string): Promise<void> {
+        if (!this.supabase) return;
+
+        console.log(`[Repository] deleteAnswer: Verifying answer ${id} exists for user ${userId}`);
+
+        // 1. Try to fetch it first to see if RLS allows us to even see it
+        const { data: fetchCheck, error: fetchError } = await this.supabase
+            .from("community_answers")
+            .select("id, user_id")
+            .eq("id", id)
+            .single();
+
+        if (fetchError) {
+            console.error('[Repository] deleteAnswer fetchCheck error:', fetchError);
+            throw new Error(`لا يمكن العثور على الإجابة أو لا تملك صلاحية الوصول إليها: ${fetchError.message}`);
+        }
+
+        console.log('[Repository] deleteAnswer fetchCheck result:', fetchCheck);
+
+        if (fetchCheck.user_id !== userId) {
+            console.warn(`[Repository] deleteAnswer: ID mapping mismatch. DB user_id: ${fetchCheck.user_id}, Action userId: ${userId}`);
+            // We might still try to delete if RLS is set up for something else, but this is a red flag.
+        }
+
+        // 2. Attempt deletion
+        const { data, error } = await this.supabase
+            .from("community_answers")
+            .delete()
+            .eq("id", id)
+            .select();
+
+        if (error) {
+            console.error('[Repository] deleteAnswer delete error:', error);
+            throw error;
+        }
+
+        if (!data || data.length === 0) {
+            console.warn('[Repository] deleteAnswer: Deletion failed despite row being visible. This is almost certainly an RLS policy issue on DELETE.');
+            throw new Error("فشل الحذف. قد لا تملك صلاحية الحذف (RLS) رغم قدرتك على رؤية الإجابة.");
+        }
+
+        console.log('[Repository] deleteAnswer success result:', data);
     }
 }

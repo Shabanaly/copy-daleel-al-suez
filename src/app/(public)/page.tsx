@@ -13,6 +13,7 @@ import { getWeatherData } from "@/actions/weather.actions";
 import { getPrayerTimes } from "@/actions/prayer.actions";
 import { getDynamicHeroSuggestions } from "@/actions/category.actions";
 import { getActiveCityPulseItems } from "@/actions/city-pulse.actions";
+import { getQuestionsAction } from "@/actions/community.actions";
 
 export const revalidate = 3600; // Revalidate every hour
 
@@ -32,6 +33,7 @@ export default async function Home() {
     prayerTimes,
     heroSuggestions,
     pulseItems,
+    communityQuestions,
   ] = await Promise.all([
     getFeaturedPlacesUseCase.execute(supabase),
     getTrendingPlacesUseCase.execute(6, supabase),
@@ -44,6 +46,7 @@ export default async function Home() {
     getPrayerTimes(),
     getDynamicHeroSuggestions(),
     getActiveCityPulseItems(),
+    getQuestionsAction({ sortBy: 'newest' }).then(qs => qs.slice(0, 3)),
   ])
 
   return (
@@ -59,6 +62,7 @@ export default async function Home() {
       prayerTimes={prayerTimes}
       heroSuggestions={heroSuggestions}
       pulseItems={pulseItems}
+      communityQuestions={communityQuestions}
     />
   );
 }

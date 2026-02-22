@@ -224,7 +224,6 @@ export function BusinessDashboardContent({ initialPlaces, initialClaims, user }:
                         <ul className="text-sm space-y-2 text-muted-foreground">
                             <li><Link href="/about/how-to-add-place" className="hover:text-primary transition-colors">مربع كيف أضيف مكاني؟</Link></li>
                             <li><Link href="/about/verification" className="hover:text-primary transition-colors">ما هو توثيق الأماكن؟</Link></li>
-                            <li><Link href="/support" className="hover:text-primary transition-colors">الدعم الفني والشكاوى</Link></li>
                         </ul>
                     </div>
                 </div>

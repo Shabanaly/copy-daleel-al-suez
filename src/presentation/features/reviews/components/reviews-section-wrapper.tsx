@@ -2,7 +2,7 @@
 
 import { ReviewsSection as ReviewsSectionClient } from './reviews-section-client'
 import { Review, ReviewStats, CreateReviewDTO } from '@/domain/entities/review'
-import { createReviewAction, updateReviewAction, deleteReviewAction, voteReviewAction } from '@/actions/reviews.actions'
+import { createReviewAction, updateReviewAction, deleteReviewAction } from '@/actions/reviews.actions'
 
 interface ReviewsSectionWrapperProps {
     placeId: string

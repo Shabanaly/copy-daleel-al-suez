@@ -1,6 +1,7 @@
 export interface CommunityAuthor {
     full_name: string;
     avatar_url?: string;
+    role?: 'user' | 'business_owner' | 'admin' | 'super_admin';
 }
 
 export type CommunityCategory =
@@ -12,23 +13,14 @@ export type CommunityCategory =
 
 export interface CommunityQuestion {
     id: string;
-    title: string;
-    body: string;
-
-    category: CommunityCategory;
-    tags?: string[];
-
+    content: string;
     user_id: string;
 
-    view_count: number;
-    answer_count: number;
-    upvote_count: number;
+    views: number;
+    answers_count: number;
+    votes_count: number;
 
-    has_accepted_answer: boolean;
     accepted_answer_id?: string;
-
-    is_closed: boolean;
-    is_flagged: boolean;
 
     created_at: string;
     updated_at: string;
@@ -39,11 +31,10 @@ export interface CommunityAnswer {
     id: string;
     question_id: string;
     user_id: string;
-    body: string;
+    content: string;
 
-    upvote_count: number;
+    votes_count: number;
     is_accepted: boolean;
-    is_flagged: boolean;
 
     created_at: string;
     updated_at: string;
@@ -55,6 +46,5 @@ export interface CommunityVote {
     user_id: string;
     votable_type: 'question' | 'answer';
     votable_id: string;
-    vote_type: 'upvote' | 'downvote';
     created_at: string;
 }

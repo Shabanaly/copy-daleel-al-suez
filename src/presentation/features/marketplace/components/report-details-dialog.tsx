@@ -187,7 +187,7 @@ export function ReportDetailsDialog({
                                         <div className="p-4 bg-muted/10 space-y-3">
                                             <div className="grid grid-cols-2 gap-3">
                                                 <a
-                                                    href={`/marketplace/${report.item.slug || report.item_id}`}
+                                                    href={`/marketplace/${report.item.slug || report.target_id}`}
                                                     target="_blank"
                                                     className="flex items-center justify-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90 py-2.5 rounded-lg text-xs font-bold transition-colors shadow-sm"
                                                 >
@@ -268,7 +268,7 @@ export function ReportDetailsDialog({
                                 if (report.item?.seller_id) { // Ensure safe access
                                     // logic handled by parent via onDeleteItem
                                 }
-                                onDeleteItem(report.id, report.item_id)
+                                onDeleteItem(report.id, report.target_id)
                                 setDeleteItemConfirmOpen(false)
                             }}
                             disabled={isPending}

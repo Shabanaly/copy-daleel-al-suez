@@ -1,10 +1,9 @@
 'use client'
 
-import { useState, useEffect } from "react"
-import { CommunityQuestion, CommunityCategory } from "@/domain/entities/community-qa"
+import React, { useState, useEffect } from "react"
+import { CommunityQuestion } from "@/domain/entities/community-qa"
 import { getQuestionsAction } from "@/actions/community.actions"
 import { QuestionCard } from "./components/question-card"
-import { CategoryFilters } from "./components/category-filters"
 import { AskQuestionModal } from "./components/ask-question-modal"
 import { Input } from "@/presentation/ui/input"
 import { Button } from "@/presentation/ui/button"
@@ -15,14 +14,12 @@ export function CommunityView() {
     const [questions, setQuestions] = useState<CommunityQuestion[]>([])
     const [loading, setLoading] = useState(true)
     const [searchQuery, setSearchQuery] = useState("")
-    const [activeCategory, setActiveCategory] = useState<CommunityCategory | 'all'>('all')
     const [isAskModalOpen, setIsAskModalOpen] = useState(false)
 
     const fetchQuestions = async () => {
         setLoading(true)
         try {
             const data = await getQuestionsAction({
-                category: activeCategory === 'all' ? undefined : activeCategory,
                 search: searchQuery || undefined
             })
             setQuestions(data)
@@ -35,7 +32,7 @@ export function CommunityView() {
 
     useEffect(() => {
         fetchQuestions()
-    }, [activeCategory])
+    }, [])
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault()
@@ -81,23 +78,16 @@ export function CommunityView() {
             </div>
 
             {/* Controls Section */}
-            <div className="space-y-6 mb-8">
-                <div className="flex flex-col md:flex-row gap-4">
-                    <form onSubmit={handleSearch} className="relative flex-1 group">
-                        <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" size={20} />
-                        <Input
-                            placeholder="ابحث في أسئلة المجتمع..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="h-14 pr-12 rounded-2xl border-border/50 bg-card hover:border-primary/30 focus-visible:ring-primary shadow-sm transition-all"
-                        />
-                    </form>
-
-                    <CategoryFilters
-                        activeCategory={activeCategory}
-                        onCategoryChange={setActiveCategory}
+            <div className="mb-8">
+                <form onSubmit={handleSearch} className="relative group max-w-2xl mx-auto">
+                    <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" size={20} />
+                    <Input
+                        placeholder="ابحث في أسئلة المجتمع..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="h-14 pr-12 rounded-2xl border-border/50 bg-card hover:border-primary/30 focus-visible:ring-primary shadow-sm transition-all text-lg"
                     />
-                </div>
+                </form>
             </div>
 
             {/* Results Section */}

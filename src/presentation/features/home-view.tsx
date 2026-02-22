@@ -12,6 +12,8 @@ import { EventCard } from "@/presentation/features/events/event-card";
 import { FeaturedEventsCarousel } from "./events/featured-events-carousel";
 import { HomeNewsSection } from "./news/home-news-section";
 import { Article } from "@/domain/entities/article";
+import { CommunityQuestion } from "@/domain/entities/community-qa";
+import { CommunityHomeSection } from "./home-view/components/community-home-section";
 import { UnifiedInfoStrip } from "@/presentation/components/home/unified-info-strip";
 import { LatestAdsSection } from "@/presentation/components/marketplace/latest-ads-section";
 import { cn } from "@/lib/utils";
@@ -58,6 +60,7 @@ interface HomeViewProps {
     prayerTimes: any;
     heroSuggestions?: HeroSuggestion[];
     pulseItems?: CityPulseItem[];
+    communityQuestions?: CommunityQuestion[];
 }
 
 export function HomeView({
@@ -72,6 +75,7 @@ export function HomeView({
     prayerTimes,
     heroSuggestions = [],
     pulseItems = [],
+    communityQuestions = [],
 }: HomeViewProps) {
     const { personalizationLevel, recommendations } = useSmartLogic();
     const [hasMounted, setHasMounted] = useState(false);
@@ -224,9 +228,12 @@ export function HomeView({
                 {/* Latest Marketplace Ads - The Bridge */}
                 <LatestAdsSection />
 
-                <div className="pt-8 mb-12">
+                <div className="pt-8">
                     <HomeNewsSection articles={latestArticles} />
                 </div>
+
+                {/* Community Section */}
+                <CommunityHomeSection questions={communityQuestions} />
 
                 {/* Footer Suggestions - Relocated for cleaner Hero */}
                 <div className="container mx-auto px-4 py-8 border-t border-border/50">

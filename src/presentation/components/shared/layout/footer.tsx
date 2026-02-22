@@ -22,7 +22,6 @@ export function Footer({ settings }: { settings?: Record<string, unknown> }) {
                     <ul className="space-y-2 text-sm">
                         <li><Link href="/about" className="hover:text-primary transition-colors">عن الدليل</Link></li>
                         <li><Link href="/contact" className="hover:text-primary transition-colors">تواصل معنا</Link></li>
-                        <li><Link href="/profile?tab=support" className="hover:text-primary transition-colors">الدعم الفني</Link></li>
                         <li><Link href="/privacy" className="hover:text-primary transition-colors">سياسة الخصوصية</Link></li>
                         <li><Link href="/terms" className="hover:text-primary transition-colors">الشروط والأحكام</Link></li>
                     </ul>

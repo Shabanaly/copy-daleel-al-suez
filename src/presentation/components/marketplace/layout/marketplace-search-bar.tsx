@@ -421,7 +421,7 @@ function renderResultsContent({ query, isLoading, results, history, linkParams, 
                 {results.map((result: MarketplaceSearchResult) => (
                     <Link
                         key={result.id}
-                        href={result.slug}
+                        href={`/marketplace/${result.slug}`}
                         onClick={() => handleResultClick(result.title)}
                         className="flex items-center gap-3 p-3 hover:bg-muted/50 border-b border-border/50 last:border-0 group"
                     >

@@ -40,25 +40,32 @@ export function NotificationBell() {
             .on(
                 'postgres_changes',
                 {
-                    event: 'INSERT',
+                    event: '*', // Listen for ALL events (INSERT, UPDATE, DELETE)
                     schema: 'public',
                     table: 'notifications',
-                    // Note: RLS will filter this for us on the server, 
-                    // BUT Supabase Realtime client-side filter is safer to only receive my own events logic-wise
-                    // However, 'filter' prop here is limited. RLS is the key.
-                    // If RLS is enabled, I only receive my rows.
                 },
-                (payload: any) => {
-                    // Increment count
-                    setUnreadCount(c => c + 1)
+                async (payload: any) => {
+                    console.log('🔔 Notification realtime event:', payload.eventType)
 
-                    // Show toast
-                    toast.info(payload.new.title || 'إشعار جديد', {
-                        description: payload.new.message,
-                        position: 'top-center',
-                        icon: <Bell size={16} />,
-                        duration: 4000
-                    })
+                    if (payload.eventType === 'INSERT') {
+                        // Increment count for new notification
+                        setUnreadCount(c => c + 1)
+
+                        // Show toast
+                        toast.info(payload.new.title || 'إشعار جديد', {
+                            description: payload.new.message,
+                            position: 'top-center',
+                            icon: <Bell size={16} />,
+                            duration: 4000
+                        })
+                    } else {
+                        // For UPDATE or DELETE, it's safer to refetch the exact count
+                        // (e.g. if marked as read in another tab)
+                        const result = await getUnreadNotificationsCountAction()
+                        if (result.success && typeof result.count === 'number') {
+                            setUnreadCount(result.count)
+                        }
+                    }
 
                     // Refresh data if needed (e.g. if we want to update the list background)
                     router.refresh()

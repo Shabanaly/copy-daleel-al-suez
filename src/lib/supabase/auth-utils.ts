@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation"
 import { createClient } from "./server"
 
 /**
@@ -21,7 +22,7 @@ export async function requireAdmin() {
     const { user, supabase, error } = await getAuthenticatedUser()
 
     if (error || !user) {
-        throw new Error(error || 'غير مصرح')
+        redirect('/login')
     }
 
     const { data: profile, error: profileError } = await supabase
@@ -31,7 +32,7 @@ export async function requireAdmin() {
         .single()
 
     if (profileError || !['admin', 'super_admin'].includes(profile?.role)) {
-        throw new Error('هذه الصلاحية للمشرفين فقط')
+        redirect('/')
     }
 
     return { user, supabase, profile }
@@ -44,7 +45,7 @@ export async function requireSuperAdmin() {
     const { user, supabase, profile } = await requireAdmin()
 
     if (profile?.role !== 'super_admin') {
-        throw new Error('هذه الصلاحية لمديري النظام فقط')
+        redirect('/')
     }
 
     return { user, supabase, profile }
