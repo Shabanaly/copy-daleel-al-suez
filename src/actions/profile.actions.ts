@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
-export async function updateProfile(data: { fullName?: string, phone?: string, city?: string, avatarUrl?: string }) {
+export async function updateProfile(data: { fullName?: string, phone?: string, avatarUrl?: string }) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
@@ -17,7 +17,6 @@ export async function updateProfile(data: { fullName?: string, phone?: string, c
     if (data.fullName) dataUpdates.full_name = data.fullName
     if (data.avatarUrl) dataUpdates.avatar_url = data.avatarUrl
     if (data.phone) dataUpdates.phone = data.phone
-    if (data.city) dataUpdates.city = data.city
 
     const { error: authError } = await supabase.auth.updateUser({
         data: dataUpdates
@@ -33,7 +32,6 @@ export async function updateProfile(data: { fullName?: string, phone?: string, c
         .update({
             full_name: data.fullName || user.user_metadata?.full_name,
             phone: data.phone || user.user_metadata?.phone,
-            city: data.city || user.user_metadata?.city,
             avatar_url: data.avatarUrl || user.user_metadata?.avatar_url,
             updated_at: new Date().toISOString()
         })

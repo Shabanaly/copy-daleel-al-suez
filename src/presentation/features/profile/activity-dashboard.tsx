@@ -11,7 +11,6 @@ interface UserStats {
     total_reviews: number;
     avg_rating: number;
     total_favorites: number;
-    helpful_votes: number;
 }
 
 interface MonthlyReview {
@@ -64,41 +63,32 @@ export function ActivityDashboard() {
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             {/* Summary Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Card>
-                    <CardContent className="p-6 flex flex-col items-center justify-center text-center space-y-2">
-                        <div className="p-3 bg-blue-100 text-blue-600 rounded-full dark:bg-blue-900/20">
-                            <MessageSquare className="h-6 w-6" />
+            <div className="grid grid-cols-3 gap-2 md:gap-4">
+                <Card className="overflow-hidden">
+                    <CardContent className="p-3 md:p-6 flex flex-col items-center justify-center text-center space-y-1 md:space-y-2">
+                        <div className="p-2 md:p-3 bg-blue-100 text-blue-600 rounded-full dark:bg-blue-900/20">
+                            <MessageSquare className="h-4 w-4 md:h-6 md:w-6" />
                         </div>
-                        <div className="text-2xl font-bold">{stats.total_reviews}</div>
-                        <div className="text-xs text-muted-foreground">مراجعة</div>
+                        <div className="text-lg md:text-2xl font-bold">{stats.total_reviews}</div>
+                        <div className="text-[10px] md:text-xs text-muted-foreground">مراجعة</div>
                     </CardContent>
                 </Card>
-                <Card>
-                    <CardContent className="p-6 flex flex-col items-center justify-center text-center space-y-2">
-                        <div className="p-3 bg-yellow-100 text-yellow-600 rounded-full dark:bg-yellow-900/20">
-                            <Star className="h-6 w-6" />
+                <Card className="overflow-hidden">
+                    <CardContent className="p-3 md:p-6 flex flex-col items-center justify-center text-center space-y-1 md:space-y-2">
+                        <div className="p-2 md:p-3 bg-yellow-100 text-yellow-600 rounded-full dark:bg-yellow-900/20">
+                            <Star className="h-4 w-4 md:h-6 md:w-6" />
                         </div>
-                        <div className="text-2xl font-bold">{Number(stats.avg_rating).toFixed(1)}</div>
-                        <div className="text-xs text-muted-foreground">متوسط التقييم</div>
+                        <div className="text-lg md:text-2xl font-bold">{Number(stats.avg_rating).toFixed(1)}</div>
+                        <div className="text-[10px] md:text-xs text-muted-foreground">متوسط التقييم</div>
                     </CardContent>
                 </Card>
-                <Card>
-                    <CardContent className="p-6 flex flex-col items-center justify-center text-center space-y-2">
-                        <div className="p-3 bg-red-100 text-red-600 rounded-full dark:bg-red-900/20">
-                            <Heart className="h-6 w-6" />
+                <Card className="overflow-hidden">
+                    <CardContent className="p-3 md:p-6 flex flex-col items-center justify-center text-center space-y-1 md:space-y-2">
+                        <div className="p-2 md:p-3 bg-red-100 text-red-600 rounded-full dark:bg-red-900/20">
+                            <Heart className="h-4 w-4 md:h-6 md:w-6" />
                         </div>
-                        <div className="text-2xl font-bold">{stats.total_favorites}</div>
-                        <div className="text-xs text-muted-foreground">مكان مفضل</div>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardContent className="p-6 flex flex-col items-center justify-center text-center space-y-2">
-                        <div className="p-3 bg-green-100 text-green-600 rounded-full dark:bg-green-900/20">
-                            <ThumbsUp className="h-6 w-6" />
-                        </div>
-                        <div className="text-2xl font-bold">{stats.helpful_votes}</div>
-                        <div className="text-xs text-muted-foreground">صوت مفيد</div>
+                        <div className="text-lg md:text-2xl font-bold">{stats.total_favorites}</div>
+                        <div className="text-[10px] md:text-xs text-muted-foreground">مكان مفضل</div>
                     </CardContent>
                 </Card>
             </div>

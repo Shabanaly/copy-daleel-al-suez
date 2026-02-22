@@ -20,8 +20,7 @@ export async function getUserStatistics() {
     return data || {
         total_reviews: 0,
         avg_rating: 0,
-        total_favorites: 0,
-        helpful_votes: 0
+        total_favorites: 0
     }
 }
 

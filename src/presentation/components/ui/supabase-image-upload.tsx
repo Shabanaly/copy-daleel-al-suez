@@ -13,6 +13,7 @@ interface ImageUploadProps {
     disabled?: boolean
     maxFiles?: number
     bucketName?: string
+    autoUpload?: boolean
 }
 
 export default function SupabaseImageUpload({
@@ -21,7 +22,8 @@ export default function SupabaseImageUpload({
     onFilesSelected,
     disabled,
     maxFiles = 5,
-    bucketName = 'places'
+    bucketName = 'places',
+    autoUpload = true
 }: ImageUploadProps) {
     const urlsValue = Array.isArray(value) ? value : (value ? [value] : [])
     const [mounted, setMounted] = useState(false)
@@ -79,7 +81,7 @@ export default function SupabaseImageUpload({
             onFilesSelected(newFiles)
         }
 
-        if (maxFiles === 1) {
+        if (maxFiles === 1 && autoUpload) {
             // Personal/Profile mode: Auto upload
             setIsUploading(true)
             try {
