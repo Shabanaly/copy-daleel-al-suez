@@ -312,7 +312,7 @@ export function HeaderSearchBar({
                                 className="fixed inset-0 z-[125] bg-transparent"
                                 onClick={() => setShowAreaMenu(false)}
                             />
-                            <div className="absolute top-full right-0 mt-2 w-56 bg-popover border border-border rounded-xl shadow-lg overflow-hidden z-[130] animate-in fade-in slide-in-from-top-1">
+                            <div className="absolute top-full right-0 mt-2 w-56 bg-popover text-foreground border border-border rounded-xl shadow-lg overflow-hidden z-[130] animate-in fade-in slide-in-from-top-1">
                                 <div className="max-h-60 overflow-y-auto custom-scrollbar">
                                     <button
                                         type="button"
@@ -403,7 +403,7 @@ export function HeaderSearchBar({
                     <>
                         {/* --- Mobile Results --- */}
                         <div className={cn(
-                            "md:hidden animate-in fade-in slide-in-from-top-1 z-[110]",
+                            "md:hidden animate-in fade-in slide-in-from-top-1 z-[110] text-foreground",
                             initialMobileFocus
                                 ? "relative flex-1 overflow-hidden pointer-events-auto h-full" // Header Modal Mode
                                 : "absolute top-full left-0 right-0 mt-2 bg-popover border border-border rounded-2xl shadow-xl overflow-hidden" // Hero Inline Mode
@@ -534,7 +534,7 @@ export function HeaderSearchBar({
                         </div>
 
                         {/* --- Desktop Results Dropdown --- */}
-                        <div className="hidden md:block absolute top-full left-0 right-0 mt-2 bg-popover border border-border rounded-2xl shadow-xl overflow-hidden z-[110] animate-in fade-in slide-in-from-top-2">
+                        <div className="hidden md:block absolute top-full left-0 right-0 mt-2 bg-popover text-foreground border border-border rounded-2xl shadow-xl overflow-hidden z-[110] animate-in fade-in slide-in-from-top-2">
                             {query.length < 2 && (
                                 <div className="p-2">
                                     {history && history.length > 0 ? (

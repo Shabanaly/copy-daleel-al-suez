@@ -10,13 +10,27 @@ export default async function PublicLayout({ children }: { children: React.React
     const settingsRepository = new SupabaseSettingsRepository(supabase);
     const settings = await settingsRepository.getPublicSettings();
 
+    // Fetch user role for admin features
+    let isAdmin = false;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single();
+        if (profile && ['admin', 'super_admin'].includes(profile.role)) {
+            isAdmin = true;
+        }
+    }
+
     return (
         <div className="flex flex-col min-h-screen bg-background">
             <Header settings={settings} />
             <main className="flex-1 md:pr-[64px]">
                 {children}
             </main>
-            <DesktopSidebar />
+            <DesktopSidebar initiallyAdmin={isAdmin} />
             <div className="md:pr-[64px]">
                 <Footer settings={settings} />
             </div>

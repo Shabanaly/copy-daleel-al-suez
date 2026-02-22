@@ -19,30 +19,28 @@ export async function incrementViewAction(tableName: string, id: string) {
     try {
         const { data: { user } } = await supabase.auth.getUser()
 
-        if (tableName === 'marketplace_items') {
-            // Use the Smart View logic for marketplace
-            const { error } = await supabase.rpc('log_smart_view', {
-                p_item_id: id,
-                p_user_id: user?.id || null,
-                p_session_id: null, // We could use a cookie here if needed, but IP + ID is a good start
-                p_ip_address: ip
-            })
+        // Map table names to entity types for the RPC
+        const entityTypeMap: Record<string, string> = {
+            'places': 'place',
+            'marketplace_items': 'marketplace_item',
+            'categories': 'category',
+            'events': 'event',
+            'articles': 'article',
+            'community_questions': 'community_question'
+        };
 
-            if (error) throw error
-        } else if (tableName === 'categories') {
-            // Use the specific category increment RPC
-            const { error } = await supabase.rpc('increment_category_view', {
-                row_id: id
-            })
-            if (error) throw error
-        } else {
-            // Fallback for other tables
-            const { error } = await supabase.rpc('increment_view_count', {
-                table_name: tableName,
-                row_id: id
-            })
-            if (error) throw error
-        }
+        const entityType = entityTypeMap[tableName] || tableName.replace(/s$/, '');
+
+        // Use the generalized log_smart_view RPC for all entity types
+        const { error } = await supabase.rpc('log_smart_view', {
+            p_entity_id: id,
+            p_entity_type: entityType,
+            p_user_id: user?.id || null,
+            p_session_id: null,
+            p_ip_address: ip
+        })
+
+        if (error) throw error
 
         return { success: true }
     } catch (err: any) {

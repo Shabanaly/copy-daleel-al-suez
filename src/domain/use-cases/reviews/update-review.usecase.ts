@@ -17,10 +17,6 @@ export class UpdateReviewUseCase {
             throw new Error('Comment must be at least 5 characters')
         }
 
-        if (data.title !== undefined && data.title.length > 200) {
-            throw new Error('Title cannot exceed 200 characters')
-        }
-
         return await this.reviewRepository.updateReview(reviewId, data)
     }
 }

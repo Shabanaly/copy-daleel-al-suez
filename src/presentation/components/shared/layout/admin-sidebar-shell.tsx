@@ -25,6 +25,7 @@ import {
     ShieldCheck,
     MapPin,
     Layers,
+    Activity,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -76,6 +77,7 @@ const SUPER_ADMIN_GROUPS: NavGroup[] = [
             { name: 'المستخدمين', href: '/admin/users', icon: Users },
             { name: 'إدارة التصنيفات', href: '/admin/categories', icon: Layers },
             { name: 'البلاغات', href: '/admin/reports', icon: Flag },
+            { name: 'نبض السويس', href: '/admin/city-pulse', icon: Activity },
             { name: 'إعدادات الموقع', href: '/admin/settings', icon: Settings },
         ],
     },

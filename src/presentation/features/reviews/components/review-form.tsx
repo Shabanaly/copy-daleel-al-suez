@@ -10,7 +10,6 @@ interface ReviewFormProps {
     placeName: string
     existingReview?: {
         rating: number
-        title?: string
         comment: string
     }
     onSubmit: (data: Omit<CreateReviewDTO, 'placeId'>) => Promise<void>
@@ -26,9 +25,7 @@ export function ReviewForm({
     isLoading = false,
 }: ReviewFormProps) {
     const [rating, setRating] = useState(existingReview?.rating || 0)
-    const [title, setTitle] = useState(existingReview?.title || '')
     const [comment, setComment] = useState(existingReview?.comment || '')
-    const [isAnonymous, setIsAnonymous] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -47,7 +44,7 @@ export function ReviewForm({
         }
 
         try {
-            await onSubmit({ rating, title: title || undefined, comment, isAnonymous })
+            await onSubmit({ rating, comment })
         } catch (err) {
             setError(err instanceof Error ? err.message : 'حدث خطأ أثناء إرسال التقييم')
         }
@@ -86,25 +83,6 @@ export function ReviewForm({
                 )}
             </div>
 
-            {/* Title (optional) */}
-            <div className="space-y-2">
-                <label htmlFor="review-title" className="text-sm font-medium text-foreground">
-                    عنوان التقييم (اختياري)
-                </label>
-                <input
-                    id="review-title"
-                    type="text"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="مثال: مكان رائع ونظيف"
-                    className="w-full px-4 py-2 bg-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    maxLength={200}
-                    disabled={isLoading}
-                />
-                <p className="text-xs text-muted-foreground text-left">
-                    {title.length}/200
-                </p>
-            </div>
 
             {/* Comment */}
             <div className="space-y-2">
@@ -125,20 +103,6 @@ export function ReviewForm({
                 </p>
             </div>
 
-            {/* Anonymous Option */}
-            <div className="flex items-center gap-2">
-                <input
-                    type="checkbox"
-                    id="is-anonymous"
-                    checked={isAnonymous}
-                    onChange={(e) => setIsAnonymous(e.target.checked)}
-                    className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
-                    disabled={isLoading}
-                />
-                <label htmlFor="is-anonymous" className="text-sm text-foreground select-none cursor-pointer">
-                    نشر التقييم كـ &quot;مستخدم&quot; (إخفاء اسمك)
-                </label>
-            </div>
 
             {/* Error */}
             {error && (

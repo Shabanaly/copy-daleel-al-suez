@@ -33,7 +33,7 @@ export function Header({ settings }: { settings?: Record<string, unknown> }) {
 
         // Scroll listener for homepage search visibility
         const handleScroll = () => {
-            if (window.scrollY > 400) {
+            if (window.scrollY > 550) {
                 setShowSearch(true)
             } else {
                 setShowSearch(false)
@@ -74,7 +74,7 @@ export function Header({ settings }: { settings?: Record<string, unknown> }) {
 
     // --- Global Header ---
     return (
-        <div className="sticky top-0 z-50 w-full">
+        <div className="sticky top-0 z-[150] w-full">
             <header className="w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:pr-[64px] transition-all duration-300">
                 <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
                     {/* Logo & Title */}
@@ -165,7 +165,7 @@ export function Header({ settings }: { settings?: Record<string, unknown> }) {
 
                 {/* Mobile Search Overlay */}
                 {isSearchOpen && mounted && createPortal(
-                    <div className="md:hidden fixed inset-0 z-[100] bg-background animate-in fade-in slide-in-from-top-5 flex flex-col p-4">
+                    <div className="md:hidden fixed inset-0 z-[200] bg-background animate-in fade-in slide-in-from-top-5 flex flex-col p-4">
                         <HeaderSearchBar initialMobileFocus={true} onClose={() => setIsSearchOpen(false)} />
                     </div>,
                     document.body

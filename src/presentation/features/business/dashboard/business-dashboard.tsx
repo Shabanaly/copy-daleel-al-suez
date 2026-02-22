@@ -1,10 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { getBusinessDashboardDataAction } from '@/actions/business.actions'
-import { Place } from '@/domain/entities/place'
+import Link from 'next/link'
+import { motion } from 'framer-motion'
+import { toast } from 'sonner'
 import {
     LayoutDashboard,
+    PlusCircle,
+    User,
     Eye,
     Star,
     MessageSquare,
@@ -22,10 +25,62 @@ import {
     Edit3,
     ShieldCheck
 } from 'lucide-react'
-import Link from 'next/link'
-import { motion } from 'framer-motion'
-import { toast } from 'sonner'
-import { FlashDealsManager } from "./flash-deals-manager";
+
+// Entity & Actions
+import { getBusinessDashboardDataAction } from '@/actions/business.actions'
+import { deleteReviewAction } from '@/actions/reviews.actions'
+import { Place } from '@/domain/entities/place'
+import { Review } from '@/domain/entities/review'
+import { cn } from '@/lib/utils'
+import { FlashDealsManager } from "./flash-deals-manager"
+
+// Helper to calculate if place is open
+function getOpeningStatus(opensAt?: string | null, closesAt?: string | null) {
+    if (!opensAt || !closesAt) return { label: "مفتوح دائماً", color: "text-green-600", subLabel: "" };
+
+    try {
+        const now = new Date();
+        const currentTime = now.getHours() * 60 + now.getMinutes();
+
+        const [openH, openM] = opensAt.split(':').map(Number);
+        const [closeH, closeM] = closesAt.split(':').map(Number);
+
+        const openTotal = openH * 60 + openM;
+        const closeTotal = closeH * 60 + closeM;
+
+        let isOpen = false;
+        if (closeTotal > openTotal) {
+            isOpen = currentTime >= openTotal && currentTime < closeTotal;
+        } else {
+            // Handle overnight hours (e.g. 10 PM to 2 AM)
+            isOpen = currentTime >= openTotal || currentTime < closeTotal;
+        }
+
+        const formatTime = (timeStr: string) => {
+            const [h, m] = timeStr.split(':').map(Number);
+            const ampm = h >= 12 ? 'م' : 'ص';
+            const h12 = h % 12 || 12;
+            return `${h12}:${m.toString().padStart(2, '0')} ${ampm}`;
+        };
+
+        if (isOpen) {
+            return {
+                label: "مفتوح حالياً",
+                subLabel: `• حتى ${formatTime(closesAt)}`,
+                color: "text-green-600"
+            };
+        } else {
+            return {
+                label: "مغلق حالياً",
+                subLabel: `• يفتح ${formatTime(opensAt)}`,
+                color: "text-rose-600"
+            };
+        }
+    } catch (e) {
+        return { label: "مفتوح", color: "text-green-600", subLabel: "" };
+    }
+}
+
 
 interface BusinessDashboardProps {
     placeId: string
@@ -33,26 +88,43 @@ interface BusinessDashboardProps {
 
 export function BusinessDashboard({ placeId }: BusinessDashboardProps) {
     const [place, setPlace] = useState<Place | null>(null)
-    const [loading, setLoading] = useState(true)
-    const [activeSection, setActiveSection] = useState<'overview' | 'deals'>('overview')
+    const [reviews, setReviews] = useState<Review[]>([])
+    const [isLoading, setIsLoading] = useState(true)
+    const [activeSection, setActiveSection] = useState<'overview' | 'deals' | 'reviews'>('overview')
+
+    const handleReviewDelete = async (reviewId: string, placeSlug: string) => {
+        try {
+            if (!confirm('هل أنت متأكد من حذف هذا التقييم؟')) return
+            const res = await deleteReviewAction(reviewId, placeSlug)
+            if (res.success) {
+                toast.success('تم حذف التقييم')
+                setReviews(reviews.filter(r => r.id !== reviewId))
+            } else {
+                toast.error('فشل حذف التقييم')
+            }
+        } catch (error) {
+            toast.error('حدث خطأ أثناء تنفيذ العملية')
+        }
+    }
 
     useEffect(() => {
-        const loadData = async () => {
+        async function loadData() {
             try {
-                const res = await getBusinessDashboardDataAction(placeId)
-                if (res.success) {
-                    setPlace(res.place)
+                const data = await getBusinessDashboardDataAction(placeId)
+                if (data.success) {
+                    setPlace(data.place)
+                    setReviews(data.reviews || [])
                 }
             } catch (error) {
-                toast.error(error instanceof Error ? error.message : 'فشل تحميل البيانات')
+                console.error('Failed to load dashboard data:', error)
             } finally {
-                setLoading(false)
+                setIsLoading(false)
             }
         }
         loadData()
     }, [placeId])
 
-    if (loading) {
+    if (isLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center">
                 <Loader2 className="w-10 h-10 animate-spin text-primary" />
@@ -68,7 +140,7 @@ export function BusinessDashboard({ placeId }: BusinessDashboardProps) {
             <header className="bg-card border-b border-border sticky top-0 z-30 shadow-sm">
                 <div className="container mx-auto px-4 h-16 flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <Link href="/profile?tab=business" className="p-2 hover:bg-muted rounded-full transition-colors">
+                        <Link href="/business/dashboard" className="p-2 hover:bg-muted rounded-full transition-colors">
                             <ArrowRight size={20} />
                         </Link>
                         <div className="flex items-center gap-3">
@@ -97,8 +169,7 @@ export function BusinessDashboard({ placeId }: BusinessDashboardProps) {
             <main className="container mx-auto px-4 py-8 max-w-7xl">
                 {activeSection === 'overview' ? (
                     <>
-                        {/* 1. Quick Stats */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 lg:gap-4 mb-8">
                             {[
                                 { label: 'مشاهدات المكان', value: place.viewCount, icon: Eye },
                                 { label: 'متوسط التقييم', value: (place.rating || 0).toFixed(1), icon: Star },
@@ -109,16 +180,15 @@ export function BusinessDashboard({ placeId }: BusinessDashboardProps) {
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: i * 0.1 }}
-                                    className="bg-card border border-border rounded-2xl p-6 shadow-sm"
+                                    className="bg-card border border-border rounded-2xl p-4 lg:p-6 shadow-sm flex flex-col items-center text-center lg:items-start lg:text-right"
                                 >
-                                    <div className="flex items-center justify-between mb-4">
-                                        <div className="p-3 rounded-xl bg-primary/10 text-primary">
-                                            <stat.icon size={24} />
+                                    <div className="flex items-center justify-center lg:justify-between w-full mb-3">
+                                        <div className="p-2.5 lg:p-3 rounded-xl bg-primary/10 text-primary">
+                                            <stat.icon size={20} className="lg:w-6 lg:h-6" />
                                         </div>
-                                        <span className="text-xs font-bold text-muted-foreground">آخر 30 يوم</span>
                                     </div>
-                                    <h4 className="text-2xl font-bold text-foreground mb-1">{stat.value}</h4>
-                                    <p className="text-sm text-muted-foreground">{stat.label}</p>
+                                    <h4 className="text-xl lg:text-2xl font-bold text-foreground mb-1">{stat.value}</h4>
+                                    <p className="text-xs lg:text-sm text-muted-foreground">{stat.label}</p>
                                 </motion.div>
                             ))}
                         </div>
@@ -153,21 +223,6 @@ export function BusinessDashboard({ placeId }: BusinessDashboardProps) {
 
                                     </div>
                                 </section>
-
-                                <section className="bg-card border border-border rounded-3xl shadow-sm overflow-hidden">
-                                    <div className="p-6 border-b border-border">
-                                        <h3 className="text-lg font-bold flex items-center gap-2">
-                                            <Clock size={20} className="text-primary" />
-                                            آخر النشاطات
-                                        </h3>
-                                    </div>
-                                    <div className="p-8 text-center">
-                                        <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4 opacity-50">
-                                            <MessageSquare size={32} />
-                                        </div>
-                                        <p className="text-muted-foreground">لا توجد نشاطات جديدة اليوم. سنعرض هنا التقييمات والحجوزات الجديدة.</p>
-                                    </div>
-                                </section>
                             </div>
 
                             <div className="space-y-6">
@@ -177,9 +232,9 @@ export function BusinessDashboard({ placeId }: BusinessDashboardProps) {
                                             <Building2 size={18} className="text-primary" />
                                             معلومات المكان
                                         </h3>
-                                        <button className="p-2 hover:bg-muted rounded-lg text-muted-foreground hover:text-primary transition-colors">
+                                        <Link href={`/places/edit/${place.id}`} className="p-2 hover:bg-muted rounded-lg text-muted-foreground hover:text-primary transition-colors">
                                             <Edit3 size={16} />
-                                        </button>
+                                        </Link>
                                     </div>
                                     <div className="p-5 space-y-4">
                                         <div className="flex items-center gap-3">
@@ -193,8 +248,15 @@ export function BusinessDashboard({ placeId }: BusinessDashboardProps) {
                                         <div className="flex items-center gap-3">
                                             <Clock size={16} className="text-muted-foreground shrink-0" />
                                             <div className="flex items-center gap-1.5 text-xs">
-                                                <span className="font-bold text-green-600">مفتوح</span>
-                                                <span className="text-muted-foreground">• حتى 11:00 م</span>
+                                                {(() => {
+                                                    const status = getOpeningStatus(place.opensAt, place.closesAt);
+                                                    return (
+                                                        <>
+                                                            <span className={cn("font-bold", status.color)}>{status.label}</span>
+                                                            {status.subLabel && <span className="text-muted-foreground">{status.subLabel}</span>}
+                                                        </>
+                                                    );
+                                                })()}
                                             </div>
                                         </div>
                                         <div className="pt-4 border-t border-border">
@@ -207,26 +269,69 @@ export function BusinessDashboard({ placeId }: BusinessDashboardProps) {
                                     </div>
                                 </section>
 
-                                <div className="space-y-3">
-                                    <button className="w-full flex items-center justify-between p-4 bg-card hover:bg-accent border border-border rounded-2xl transition-all group">
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-2 bg-muted rounded-lg group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                                                <Settings size={18} />
+                            </div>
+
+                            {/* Latest Reviews - Moved to bottom on mobile, stays left on desktop */}
+                            <div className="lg:col-span-2 space-y-6">
+                                <section className="bg-card border border-border rounded-3xl shadow-sm overflow-hidden">
+                                    <div className="p-6 border-b border-border flex items-center justify-between">
+                                        <h3 className="text-lg font-bold flex items-center gap-2">
+                                            <MessageSquare size={20} className="text-primary" />
+                                            آخر التقييمات
+                                        </h3>
+                                        {reviews.length > 0 && (
+                                            <span className="text-xs font-medium text-muted-foreground">{reviews.length} تقييمات جديدة</span>
+                                        )}
+                                    </div>
+                                    <div className="divide-y divide-border">
+                                        {reviews.length > 0 ? (
+                                            reviews.map((review: Review) => (
+                                                <div key={review.id} className="p-6 hover:bg-muted/5 transition-colors">
+                                                    <div className="flex items-start gap-4">
+                                                        <div className="relative w-10 h-10 rounded-full overflow-hidden bg-muted flex-shrink-0 border border-border">
+                                                            {review.userAvatar ? (
+                                                                <img src={review.userAvatar} alt={review.userName} className="object-cover w-full h-full" />
+                                                            ) : (
+                                                                <User size={20} className="m-auto text-muted-foreground" />
+                                                            )}
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center justify-between mb-1">
+                                                                <h4 className="font-bold text-sm text-foreground truncate">{review.userName || 'مستخدم'}</h4>
+                                                                <div className="flex items-center gap-1 text-amber-500">
+                                                                    <Star size={12} fill="currentColor" />
+                                                                    <span className="text-xs font-black">{review.rating}</span>
+                                                                </div>
+                                                            </div>
+                                                            <p className="text-xs text-muted-foreground leading-relaxed">
+                                                                {review.comment}
+                                                            </p>
+                                                            <div className="mt-2 flex items-center justify-between">
+                                                                <span className="text-[10px] text-muted-foreground">
+                                                                    {new Date(review.createdAt).toLocaleDateString('ar-EG', { day: 'numeric', month: 'long' })}
+                                                                </span>
+                                                                <button
+                                                                    onClick={() => handleReviewDelete(review.id, place.slug)}
+                                                                    className="text-[10px] font-bold text-rose-500 hover:text-rose-600 transition-colors"
+                                                                >
+                                                                    حذف
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="p-8 text-center">
+                                                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4 opacity-50">
+                                                    <MessageSquare size={32} />
+                                                </div>
+                                                <p className="text-sm font-bold text-foreground mb-1">لا توجد تقييمات بعد</p>
+                                                <p className="text-xs text-muted-foreground">عندما يترك المستخدمون تقييمات لمكانك ستظهر هنا فوراً.</p>
                                             </div>
-                                            <span className="text-sm font-bold">إعدادات الحساب التجاري</span>
-                                        </div>
-                                        <ChevronLeft size={16} className="text-muted-foreground" />
-                                    </button>
-                                    <button className="w-full flex items-center justify-between p-4 bg-card hover:bg-accent border border-border rounded-2xl transition-all group">
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-2 bg-muted rounded-lg group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                                                <ShieldCheck size={18} />
-                                            </div>
-                                            <span className="text-sm font-bold">الدعم الفني والشكاوي</span>
-                                        </div>
-                                        <ChevronLeft size={16} className="text-muted-foreground" />
-                                    </button>
-                                </div>
+                                        )}
+                                    </div>
+                                </section>
                             </div>
                         </div>
                     </>
@@ -245,6 +350,6 @@ export function BusinessDashboard({ placeId }: BusinessDashboardProps) {
                     </div>
                 )}
             </main>
-        </div>
+        </div >
     )
 }

@@ -17,7 +17,6 @@ interface ReviewsSectionProps {
     onCreateReview: (data: Omit<CreateReviewDTO, 'placeId'>) => Promise<void>
     onUpdateReview: (reviewId: string, data: Partial<CreateReviewDTO>) => Promise<void>
     onDeleteReview: (reviewId: string) => Promise<void>
-    onVoteReview: (reviewId: string, isHelpful: boolean) => Promise<void>
 }
 
 export function ReviewsSection({
@@ -30,7 +29,6 @@ export function ReviewsSection({
     onCreateReview,
     onUpdateReview,
     onDeleteReview,
-    onVoteReview,
 }: ReviewsSectionProps) {
     const [showForm, setShowForm] = useState(false)
     const [editingReviewId, setEditingReviewId] = useState<string | null>(null)
@@ -136,7 +134,6 @@ export function ReviewsSection({
                     placeName={placeName}
                     existingReview={editingReview ? {
                         rating: editingReview.rating,
-                        title: editingReview.title,
                         comment: editingReview.comment
                     } : undefined}
                     onSubmit={handleSubmit}
@@ -163,10 +160,8 @@ export function ReviewsSection({
                             key={review.id}
                             review={review}
                             isOwnReview={review.userId === currentUserId}
-                            onHelpful={currentUserId && review.userId !== currentUserId ? onVoteReview : undefined}
                             onEdit={review.userId === currentUserId ? handleEdit : undefined}
                             onDelete={review.userId === currentUserId ? handleDelete : undefined}
-                            userVote={review.currentUserVote}
                         />
                     ))
                 )}

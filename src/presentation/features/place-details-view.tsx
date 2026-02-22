@@ -128,8 +128,8 @@ export function PlaceDetailsView({
                                     <div className="flex flex-wrap items-center gap-3 md:gap-6">
                                         <div className="flex items-center gap-2 bg-secondary/80 backdrop-blur-md px-4 py-2 rounded-2xl border border-border/50 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-500">
                                             <Star size={20} className="text-yellow-500 fill-yellow-500" />
-                                            <span className="font-black text-lg md:text-xl text-foreground">{place.rating}</span>
-                                            <span className="text-xs text-muted-foreground font-bold">({place.reviewCount} تقييم)</span>
+                                            <span className="font-black text-lg md:text-xl text-foreground">{ratingStats.average.toFixed(1)}</span>
+                                            <span className="text-xs text-muted-foreground font-bold">({ratingStats.count} تقييم)</span>
                                         </div>
 
                                         <div className="flex items-center gap-2 bg-secondary/80 backdrop-blur-md px-4 py-2 rounded-2xl border border-border/50 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-700">
@@ -189,25 +189,25 @@ export function PlaceDetailsView({
                                     {/* Large Rating Number */}
                                     <div className="text-center sm:px-4 sm:border-l border-border last:border-0">
                                         <div className="text-4xl font-black text-foreground mb-1">
-                                            {place.rating.toFixed(1)}
+                                            {ratingStats.average.toFixed(1)}
                                         </div>
                                         <div className="flex items-center justify-center gap-0.5 mb-1">
                                             {[...Array(5)].map((_, i) => (
                                                 <Star
                                                     key={i}
                                                     size={16}
-                                                    className={i < Math.round(place.rating) ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground/30"}
+                                                    className={i < Math.round(ratingStats.average) ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground/30"}
                                                 />
                                             ))}
                                         </div>
-                                        <p className="text-[10px] font-bold text-muted-foreground">{place.reviewCount} تقييم</p>
+                                        <p className="text-[10px] font-bold text-muted-foreground">{ratingStats.count} تقييم</p>
                                     </div>
 
                                     {/* Bars Distribution */}
                                     <div className="flex-1 w-full space-y-2">
                                         {[5, 4, 3, 2, 1].map((star) => {
                                             const count = ratingStats?.distribution?.[star as 1 | 2 | 3 | 4 | 5] || 0;
-                                            const percentage = place.reviewCount > 0 ? (count / place.reviewCount) * 100 : 0;
+                                            const percentage = ratingStats.count > 0 ? (count / ratingStats.count) * 100 : 0;
                                             return (
                                                 <div key={star} className="flex items-center gap-2">
                                                     <div className="flex items-center gap-0.5 w-8 shrink-0">

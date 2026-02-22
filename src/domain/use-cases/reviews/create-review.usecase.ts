@@ -18,10 +18,6 @@ export class CreateReviewUseCase {
             throw new Error('Comment must be at least 5 characters')
         }
 
-        if (data.title && data.title.length > 200) {
-            throw new Error('Title cannot exceed 200 characters')
-        }
-
         return await this.reviewRepository.createReview(data)
     }
 }

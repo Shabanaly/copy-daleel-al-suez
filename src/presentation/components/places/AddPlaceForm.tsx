@@ -236,7 +236,10 @@ export default function AddPlaceForm({ categories, areas, initialPlace }: AddPla
             toast.success(isEditMode ? 'تم تحديث البيانات بنجاح!' : 'تم إرسال طلبك بنجاح! سيتم مراجعته قريباً.')
             if (!isEditMode) {
                 router.push('/places/thank-you')
-            } else {
+            } else if (initialPlace) {
+                // If we are in the public dashboard area or came from it, return to it
+                // We'll use the business dashboard for that specific place as the target
+                router.push(`/business/dashboard/${initialPlace.id}`)
                 router.refresh()
             }
         } else if (state.message) {

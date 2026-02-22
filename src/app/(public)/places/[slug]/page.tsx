@@ -113,14 +113,9 @@ export default async function PlaceDetailsPage({
                 placeId: existingReview.place_id,
                 userId: existingReview.user_id,
                 rating: existingReview.rating,
-                title: existingReview.title,
                 comment: existingReview.comment,
-                helpfulCount: existingReview.helpful_count || 0,
-                status: existingReview.status,
-                createdAt: existingReview.created_at,
-                updatedAt: existingReview.updated_at,
-                replyCount: 0,
-            }
+                createdAt: existingReview.created_at
+            } as any
         }
     }
 

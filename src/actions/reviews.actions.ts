@@ -7,7 +7,6 @@ import { SupabaseReviewRepository } from '@/data/repositories/supabase-review.re
 import { CreateReviewUseCase } from '@/domain/use-cases/reviews/create-review.usecase'
 import { UpdateReviewUseCase } from '@/domain/use-cases/reviews/update-review.usecase'
 import { DeleteReviewUseCase } from '@/domain/use-cases/reviews/delete-review.usecase'
-import { VoteReviewUseCase } from '@/domain/use-cases/reviews/vote-review.usecase'
 import { GetUserReviewsUseCase } from '@/domain/use-cases/reviews/get-user-reviews.usecase'
 
 // Helper to create use cases with authenticated client
@@ -23,7 +22,6 @@ async function getAuthenticatedUseCases() {
         createReviewUseCase: new CreateReviewUseCase(reviewRepository),
         updateReviewUseCase: new UpdateReviewUseCase(reviewRepository),
         deleteReviewUseCase: new DeleteReviewUseCase(reviewRepository),
-        voteReviewUseCase: new VoteReviewUseCase(reviewRepository),
         getUserReviewsUseCase: new GetUserReviewsUseCase(reviewRepository),
     }
 }
@@ -49,10 +47,8 @@ export async function createReviewAction(placeId: string, placeSlug: string, dat
         throw new Error('يجب تسجيل الدخول لكتابة تقييم')
     }
 
-
     const userName = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'مستخدم'
     const userAvatar = user.user_metadata?.avatar_url || user.user_metadata?.picture
-
 
     try {
         await createReviewUseCase.execute({
@@ -107,23 +103,5 @@ export async function deleteReviewAction(reviewId: string, placeSlug: string) {
         return { success: true }
     } catch (error) {
         throw new Error(error instanceof Error ? error.message : 'فشل حذف التقييم')
-    }
-}
-
-export async function voteReviewAction(reviewId: string, placeSlug: string, isHelpful: boolean) {
-    const { user, voteReviewUseCase } = await getAuthenticatedUseCases()
-
-    if (!user) {
-        throw new Error('يجب تسجيل الدخول للتصويت')
-    }
-
-    try {
-        await voteReviewUseCase.execute(reviewId, user.id, isHelpful)
-
-        revalidatePath(`/places/${placeSlug}`)
-
-        return { success: true }
-    } catch (error) {
-        throw new Error(error instanceof Error ? error.message : 'فشل التصويت')
     }
 }

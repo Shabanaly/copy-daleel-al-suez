@@ -12,6 +12,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getWeatherData } from "@/actions/weather.actions";
 import { getPrayerTimes } from "@/actions/prayer.actions";
 import { getDynamicHeroSuggestions } from "@/actions/category.actions";
+import { getActiveCityPulseItems } from "@/actions/city-pulse.actions";
 
 export const revalidate = 3600; // Revalidate every hour
 
@@ -29,7 +30,8 @@ export default async function Home() {
     latestArticles,
     weather,
     prayerTimes,
-    heroSuggestions
+    heroSuggestions,
+    pulseItems,
   ] = await Promise.all([
     getFeaturedPlacesUseCase.execute(supabase),
     getTrendingPlacesUseCase.execute(6, supabase),
@@ -40,7 +42,8 @@ export default async function Home() {
     getLatestArticlesUseCase.execute(3, supabase),
     getWeatherData(),
     getPrayerTimes(),
-    getDynamicHeroSuggestions()
+    getDynamicHeroSuggestions(),
+    getActiveCityPulseItems(),
   ])
 
   return (
@@ -55,6 +58,7 @@ export default async function Home() {
       weather={weather}
       prayerTimes={prayerTimes}
       heroSuggestions={heroSuggestions}
+      pulseItems={pulseItems}
     />
   );
 }

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Place } from "@/domain/entities/place";
 import { Category } from "@/domain/entities/category";
 import { SuezEvent } from "@/domain/entities/suez-event";
+import { CityPulseItem } from "@/domain/entities/city-pulse-item";
 import { PlaceCard } from "@/presentation/features/places/components/place-card";
 import { CategoryCard } from "@/presentation/features/categories/components/category-card";
 import { EventCard } from "@/presentation/features/events/event-card";
@@ -56,6 +57,7 @@ interface HomeViewProps {
     weather: any;
     prayerTimes: any;
     heroSuggestions?: HeroSuggestion[];
+    pulseItems?: CityPulseItem[];
 }
 
 export function HomeView({
@@ -68,7 +70,8 @@ export function HomeView({
     latestArticles,
     weather,
     prayerTimes,
-    heroSuggestions = []
+    heroSuggestions = [],
+    pulseItems = [],
 }: HomeViewProps) {
     const { personalizationLevel, recommendations } = useSmartLogic();
     const [hasMounted, setHasMounted] = useState(false);
@@ -124,10 +127,10 @@ export function HomeView({
     return (
         <div className="pb-12">
             {/* Live City Pulse Ticker */}
-            <CityPulseTicker />
+            <CityPulseTicker items={pulseItems} />
 
             {/* Hero Section - Search & Welcome */}
-            <section className="relative h-[500px] flex items-center justify-center bg-gradient-to-br from-primary to-blue-600 dark:from-slate-950 dark:to-slate-900 text-white z-20">
+            <section className="relative h-[500px] flex items-center justify-center bg-gradient-to-br from-primary to-blue-600 dark:from-slate-950 dark:to-slate-900 text-white">
                 {/* Background Pattern Container - Clips only background elements */}
                 <div className="absolute inset-0 overflow-hidden pointer-events-none">
                     <div className="absolute inset-0 bg-[url('/images/hero-bg.png')] bg-cover bg-center opacity-30"></div>
@@ -156,7 +159,7 @@ export function HomeView({
 
                     {/* Smart Search Bar */}
                     <div className="max-w-2xl mx-auto w-full mb-6 relative">
-                        <div className="bg-white/10 backdrop-blur-xl p-1.5 rounded-full border border-white/20 shadow-2xl relative z-[101]">
+                        <div className="bg-white/10 backdrop-blur-xl p-1.5 rounded-full border border-white/20 shadow-2xl relative z-[60]">
                             <HeaderSearchBar containerClassName="max-w-none" />
                         </div>
                     </div>
@@ -251,7 +254,6 @@ export function HomeView({
                                     <SuggestionButton icon={<Coffee size={14} />} label="كافيهات" href="/categories/cafes" isDark />
                                 </>
                             )}
-                            <SuggestionButton icon={<Navigation size={14} />} label="خريطة السويس" href="/explore/map" isPrimary />
                         </div>
                     </div>
                 </div>

@@ -17,7 +17,6 @@ const navGroups = [
         items: [
             { icon: Home, label: 'الرئيسية', href: '/' },
             { icon: LayoutGrid, label: 'تصفح الأقسام', href: '/categories' },
-            { icon: MapPin, label: 'خريطة السويس', href: '/map' },
             { icon: Plus, label: 'أضف مكان جديد', href: '/places/new' },
         ]
     },
@@ -206,17 +205,17 @@ export function MobileDrawer({ user }: MobileDrawerProps) {
                                 {/* Admin Section - Only for Admins */}
                                 {isAdmin && (
                                     <div className="space-y-1 pt-2">
-                                        <h3 className="px-3 text-[10px] font-black uppercase tracking-[0.2em] text-primary/40 pb-1">
+                                        <h3 className="px-3 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50 pb-1">
                                             الإدارة
                                         </h3>
                                         <Link
                                             href="/content-admin"
                                             onClick={() => setIsOpen(false)}
                                             className={cn(
-                                                "flex items-center gap-2.5 px-3 py-3 rounded-xl transition-all duration-200 group border-2 border-dashed border-primary/20 hover:border-primary/50 hover:bg-primary/5",
+                                                "flex items-center gap-2.5 px-3 py-3 rounded-xl transition-all duration-200 group border-2 border-dashed border-border hover:border-primary/50 hover:bg-accent",
                                                 pathname.startsWith('/content-admin') || pathname.startsWith('/admin')
                                                     ? 'bg-primary/10 text-primary font-black ring-1 ring-primary/30'
-                                                    : 'text-primary/70 hover:text-primary'
+                                                    : 'text-foreground/70 hover:text-foreground'
                                             )}
                                         >
                                             <Shield size={18} className="animate-pulse" />

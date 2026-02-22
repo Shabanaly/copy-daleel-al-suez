@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { CreateBusinessClaimDTO } from '@/domain/entities/business-claim'
 import { SupabaseBusinessClaimRepository } from '@/data/repositories/supabase-business-claim.repository'
 import { SupabasePlaceRepository } from '@/data/repositories/supabase-place.repository'
+import { SupabaseReviewRepository } from '@/data/repositories/supabase-review.repository'
 import { SupabaseFlashDealRepository } from '@/data/repositories/supabase-flash-deal.repository'
 import { SubmitBusinessClaimUseCase } from '@/domain/use-cases/business/submit-business-claim.usecase'
 import { CreateFlashDealDTO } from '@/domain/entities/flash-deal'
@@ -24,7 +25,8 @@ async function getAuthenticatedUseCases() {
         submitBusinessClaimUseCase: new SubmitBusinessClaimUseCase(businessClaimRepository),
         businessClaimRepository,
         placeRepository,
-        flashDealRepository
+        flashDealRepository,
+        reviewRepository: new SupabaseReviewRepository(supabase)
     }
 }
 
@@ -90,7 +92,21 @@ export async function getBusinessDashboardDataAction(placeId: string) {
             }
         }
 
-        return { success: true, place }
+        const auth = await getAuthenticatedUseCases();
+        const [reviews, stats] = await Promise.all([
+            (auth.reviewRepository as SupabaseReviewRepository).getReviewsByPlace(placeId),
+            (auth.reviewRepository as SupabaseReviewRepository).getPlaceRatingStats(placeId)
+        ]);
+
+        return {
+            success: true,
+            place: {
+                ...place,
+                rating: stats.average,
+                reviewCount: stats.count
+            },
+            reviews: reviews.slice(0, 5)
+        }
     } catch (error) {
         console.error('Get Business Dashboard Data Error:', error)
         throw new Error(error instanceof Error ? error.message : 'فشل تحميل بيانات لوحة التحكم')

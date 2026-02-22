@@ -81,9 +81,9 @@ function SidebarItem({ icon: Icon, label, href, active, isExpanded, badge }: Sid
     )
 }
 
-export function DesktopSidebar() {
+export function DesktopSidebar({ initiallyAdmin = false }: { initiallyAdmin?: boolean }) {
     const [isHovered, setIsHovered] = useState(false)
-    const [isAdmin, setIsAdmin] = useState(false)
+    const [isAdmin, setIsAdmin] = useState(initiallyAdmin)
     const pathname = usePathname()
 
     useEffect(() => {
@@ -111,7 +111,6 @@ export function DesktopSidebar() {
             items: [
                 { icon: Home, label: 'الرئيسية', href: '/' },
                 { icon: LayoutGrid, label: 'تصفح الأقسام', href: '/categories' },
-                { icon: MapPin, label: 'خريطة السويس', href: '/map' },
                 { icon: Plus, label: 'أضف مكان جديد', href: '/places/new' },
             ]
         },
@@ -187,7 +186,7 @@ export function DesktopSidebar() {
                     {/* Admin Dashboard - Simplified Link */}
                     {isAdmin && (
                         <div className="space-y-1 pt-2">
-                            {isHovered && <p className="text-[9px] font-black text-primary/40 px-3 uppercase tracking-widest pb-1">الإدارة</p>}
+                            {isHovered && <p className="text-[9px] font-black text-muted-foreground/40 px-3 uppercase tracking-widest pb-1">الإدارة</p>}
                             <SidebarItem
                                 icon={Shield}
                                 label="لوحة التحكم"

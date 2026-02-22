@@ -27,9 +27,6 @@ export function ReviewsSectionWrapper(props: ReviewsSectionWrapperProps) {
         await deleteReviewAction(reviewId, props.placeSlug)
     }
 
-    const handleVoteReview = async (reviewId: string, isHelpful: boolean) => {
-        await voteReviewAction(reviewId, props.placeSlug, isHelpful)
-    }
 
     return (
         <ReviewsSectionClient
@@ -42,7 +39,6 @@ export function ReviewsSectionWrapper(props: ReviewsSectionWrapperProps) {
             onCreateReview={handleCreateReview}
             onUpdateReview={handleUpdateReview}
             onDeleteReview={handleDeleteReview}
-            onVoteReview={handleVoteReview}
         />
     )
 }

@@ -13,10 +13,7 @@ import { OverviewSection } from '@/presentation/features/profile/overview-sectio
 import { ActivityDashboard } from '@/presentation/features/profile/activity-dashboard'
 import { motion } from 'framer-motion'
 import { UserReviewsSection } from './user-reviews-section'
-import { UserFavoritesSection } from './user-favorites-section'
-import { UserMarketplaceSection } from './user-marketplace-section'
 import { UserNotificationsSection } from './user-notifications-section'
-import { UserBusinessSection } from './user-business-section'
 import {
     Accordion,
     AccordionContent,
@@ -24,7 +21,7 @@ import {
     AccordionTrigger,
 } from "@/presentation/ui/accordion"
 
-type TabType = 'overview' | 'activity' | 'reviews' | 'favorites' | 'marketplace' | 'notifications' | 'business'
+type TabType = 'overview' | 'contributions' | 'notifications'
 
 interface Profile {
     role?: string
@@ -44,7 +41,7 @@ export function ProfileContent() {
 
     useEffect(() => {
         const tabParam = searchParams.get('tab')
-        if (tabParam && ['overview', 'activity'].includes(tabParam)) {
+        if (tabParam && ['overview', 'contributions'].includes(tabParam)) {
             setActiveTab(tabParam as TabType)
         }
     }, [searchParams])
@@ -103,11 +100,17 @@ export function ProfileContent() {
 
     const tabs: (TabItem<TabType> & { component: React.ReactNode })[] = [
         { id: 'overview', label: 'نظرة عامة', icon: User, component: <OverviewSection user={user} isAdmin={isAdmin} /> },
-        { id: 'activity', label: 'النشاط', icon: Activity, component: <ActivityDashboard /> },
-        { id: 'reviews', label: 'التقييمات', icon: Star, component: <UserReviewsSection /> },
-        { id: 'favorites', label: 'المفضلة', icon: Heart, component: <UserFavoritesSection /> },
-        { id: 'marketplace', label: 'إعلاناتي', icon: PlusCircle, component: <UserMarketplaceSection userId={user.id} /> },
-        { id: 'business', label: 'إدارة الأنشطة', icon: Building2, component: <UserBusinessSection /> },
+        {
+            id: 'contributions',
+            label: 'مساهماتي',
+            icon: Activity,
+            component: (
+                <div className="space-y-8">
+                    <ActivityDashboard />
+                    <UserReviewsSection />
+                </div>
+            )
+        },
         { id: 'notifications', label: 'التنبيهات', icon: Bell, component: <UserNotificationsSection /> },
     ]
 
@@ -242,15 +245,15 @@ export function ProfileContent() {
                         <h3 className="text-lg font-bold px-2">روابط سريعة</h3>
 
                         <Link
-                            href="/places/new"
+                            href="/business/dashboard"
                             className="flex items-center gap-3 p-4 bg-card hover:bg-accent border border-border hover:border-primary/30 rounded-2xl transition-all group shadow-sm"
                         >
                             <div className="p-3 bg-gradient-to-br from-green-500/20 to-green-500/10 text-green-600 dark:text-green-400 rounded-xl group-hover:scale-110 transition-transform">
-                                <PlusCircle size={20} />
+                                <Building2 size={20} />
                             </div>
                             <div className="flex-1">
-                                <p className="font-bold text-foreground text-sm">أضف مكانك</p>
-                                <p className="text-xs text-muted-foreground">نشاطك التجاري</p>
+                                <p className="font-bold text-foreground text-sm">لوحة أنشطتي</p>
+                                <p className="text-xs text-muted-foreground">إداره نشاطك التجاري</p>
                             </div>
                         </Link>
 
@@ -300,15 +303,15 @@ export function ProfileContent() {
                         <h3 className="text-lg font-bold px-2">روابط سريعة</h3>
 
                         <Link
-                            href="/places/new"
+                            href="/business/dashboard"
                             className="flex items-center gap-3 p-4 bg-card hover:bg-accent border border-border hover:border-primary/30 rounded-2xl transition-all group shadow-sm hover:shadow-md"
                         >
                             <div className="p-3 bg-gradient-to-br from-green-500/20 to-green-500/10 text-green-600 dark:text-green-400 rounded-xl group-hover:scale-110 transition-transform">
-                                <PlusCircle size={20} />
+                                <Building2 size={20} />
                             </div>
                             <div className="flex-1">
-                                <p className="font-bold text-foreground text-sm">أضف مكانك</p>
-                                <p className="text-xs text-muted-foreground">نشاطك التجاري</p>
+                                <p className="font-bold text-foreground text-sm">لوحة أنشطتي</p>
+                                <p className="text-xs text-muted-foreground">إدارة نشاطك التجاري</p>
                             </div>
                         </Link>
 
