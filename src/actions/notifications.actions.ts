@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { sanitizeText } from '@/lib/utils/sanitize'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { SupabaseNotificationRepository } from '@/data/repositories/supabase-notification.repository'
@@ -145,6 +146,25 @@ export async function createNotificationAction(params: CreateNotificationParams)
         console.error('❌ createNotificationAction failed:', error)
         return { success: false, error: error.message }
     }
+}
+
+/** Validates, sanitizes and submits contact form - use this instead of notifyAdminsAction for contact form */
+export async function submitContactFormAction(data: { name: string; email: string; message: string }) {
+    const name = sanitizeText(data.name || '').trim()
+    const email = sanitizeText(data.email || '').trim()
+    const message = sanitizeText(data.message || '').trim()
+
+    if (!name || name.length < 2) return { success: false, error: 'الاسم يجب أن يكون حرفين على الأقل' }
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { success: false, error: 'البريد الإلكتروني غير صحيح' }
+    if (!message || message.length < 10) return { success: false, error: 'الرسالة يجب أن تكون 10 أحرف على الأقل' }
+    if (message.length > 2000) return { success: false, error: 'الرسالة طويلة جداً' }
+
+    return notifyAdminsAction({
+        title: 'رسالة تواصل جديدة ✉️',
+        message: `وصلت رسالة جديدة من ${name} (${email})`,
+        type: 'contact_message',
+        data: { name, email, message, url: '/content-admin/notifications' }
+    })
 }
 
 export async function notifyAdminsAction(params: Omit<CreateNotificationParams, 'userId'>) {

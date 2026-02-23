@@ -2,7 +2,7 @@
 
 import { Mail, Phone, MapPin, Loader2, Send } from 'lucide-react'
 import { useState } from 'react'
-import { notifyAdminsAction } from '@/actions/notifications.actions'
+import { submitContactFormAction } from '@/actions/notifications.actions'
 import { toast } from 'sonner'
 
 export function ContactView() {
@@ -23,21 +23,13 @@ export function ContactView() {
 
         setLoading(true)
         try {
-            const result = await notifyAdminsAction({
-                title: 'رسالة تواصل جديدة ✉️',
-                message: `وصلت رسالة جديدة من ${formData.name} (${formData.email})`,
-                type: 'contact_message',
-                data: {
-                    ...formData,
-                    url: '/content-admin/notifications'
-                }
-            })
+            const result = await submitContactFormAction(formData)
 
             if (result.success) {
                 toast.success('تم إرسال رسالتك بنجاح، سنقوم بالرد عليك في أقرب وقت')
                 setFormData({ name: '', email: '', message: '' })
             } else {
-                throw new Error(result.error || 'فشل الإرسال')
+                toast.error(result.error || 'فشل الإرسال')
             }
         } catch (error) {
             console.error('Contact Form Error:', error)

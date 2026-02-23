@@ -69,6 +69,10 @@ export async function submitQuestionAction(data: {
         return { success: true, question }
     } catch (error) {
         console.error('submitQuestionAction error:', error)
+        // Preserve validation error messages for user feedback
+        if (error instanceof Error && (error.message.includes('قصير') || error.message.includes('طويل') || error.message.includes('يجب'))) {
+            throw error
+        }
         throw new Error('فشل طرح السؤال')
     }
 }
@@ -124,6 +128,10 @@ export async function submitAnswerAction(questionId: string, body: string) {
         return { success: true, answer }
     } catch (error) {
         console.error('submitAnswerAction error:', error)
+        // Preserve validation error messages for user feedback
+        if (error instanceof Error && (error.message.includes('قصير') || error.message.includes('طويل') || error.message.includes('يجب'))) {
+            throw error
+        }
         throw new Error('فشل إضافة الإجابة')
     }
 }
