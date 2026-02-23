@@ -7,7 +7,6 @@ import { Category } from "@/domain/entities/category";
 import { SuezEvent } from "@/domain/entities/suez-event";
 import { CityPulseItem } from "@/domain/entities/city-pulse-item";
 import { PlaceCard } from "@/presentation/features/places/components/place-card";
-import { CategoryCard } from "@/presentation/features/categories/components/category-card";
 import { EventCard } from "@/presentation/features/events/event-card";
 import { FeaturedEventsCarousel } from "./events/featured-events-carousel";
 import { HomeNewsSection } from "./news/home-news-section";
@@ -17,18 +16,21 @@ import { MarketplaceItem } from "@/domain/entities/marketplace-item";
 import { CommunityHomeSection } from "./home-view/components/community-home-section";
 import { UnifiedInfoStrip } from "@/presentation/components/home/unified-info-strip";
 import { LatestAdsSection } from "@/presentation/components/marketplace/latest-ads-section";
+import { PlatformAnnouncement } from "@/presentation/components/ads/platform-announcement";
+import { NativeAdBanner } from "@/presentation/components/ads/native-ad-banner";
+import { AdSenseBlock } from "@/presentation/components/ads/adsense-block";
+import { AdCarousel } from "@/presentation/components/ads/ad-carousel";
 import { cn } from "@/lib/utils";
 import { RecentlyViewedSection } from "@/presentation/components/home/recently-viewed-section";
 import { CityPulseTicker } from "@/presentation/components/home/city-pulse-ticker";
 import { QuickDiscoveryGrid } from "@/presentation/components/home/quick-discovery-grid";
 import { PersonalizedSection } from "@/presentation/components/home/personalized-section";
-import { TrendingUp, Clock as ClockIcon } from "lucide-react";
-
-import { ArrowLeft, Sparkles, Calendar, MapPin, Search, Utensils, Pill, Coffee, Landmark, Navigation } from "lucide-react";
+import { Sparkles, Calendar, Utensils, Pill, Coffee, Landmark } from "lucide-react";
 import { HeaderSearchBar } from "@/presentation/components/shared/layout/header-search-bar";
 import { HorizontalScroll } from "@/presentation/components/shared/ui/horizontal-scroll";
 import { useSmartLogic } from "@/hooks/use-smart-logic";
 import { usePersistence } from "@/hooks/use-persistence";
+import { FlashDeal } from "@/domain/entities/flash-deal";
 
 const CATEGORY_ICONS: Record<string, React.ReactNode> = {
     'restaurants': <Utensils size={14} />,
@@ -37,7 +39,6 @@ const CATEGORY_ICONS: Record<string, React.ReactNode> = {
     'banks': <Landmark size={14} />,
 };
 
-// Fallback icon
 const DefaultIcon = <Sparkles size={14} />;
 
 interface HeroSuggestion {
@@ -63,6 +64,7 @@ interface HomeViewProps {
     pulseItems?: CityPulseItem[];
     communityQuestions?: CommunityQuestion[];
     marketplaceAds?: MarketplaceItem[];
+    promotions?: FlashDeal[];
 }
 
 export function HomeView({
@@ -79,8 +81,9 @@ export function HomeView({
     pulseItems = [],
     communityQuestions = [],
     marketplaceAds = [],
+    promotions = [],
 }: HomeViewProps) {
-    const { personalizationLevel, recommendations } = useSmartLogic();
+    const { personalizationLevel } = useSmartLogic();
     const [hasMounted, setHasMounted] = useState(false);
     usePersistence();
 
@@ -88,15 +91,6 @@ export function HomeView({
         setHasMounted(true);
     }, []);
 
-    // 1. Dynamic Greeting based on profile
-    const greeting = useMemo(() => {
-        if (!hasMounted) return "دليل السويس دليلك لكل حاجة في السويس";
-        if (personalizationLevel === 'advanced') return "أهلاً بك يا صديقي السويسي!";
-        if (personalizationLevel === 'intermediate') return "منورنا تاني.. دليلك جاهز!";
-        return "دليل السويس دليلك لكل حاجة في السويس";
-    }, [personalizationLevel, hasMounted]);
-
-    // 2. Personalized Sections Order
     const sections = useMemo(() => {
         const baseSections = [
             {
@@ -122,7 +116,6 @@ export function HomeView({
             }
         ];
 
-        // Move Top Rated to first if user is an "Advanced" user
         if (hasMounted && personalizationLevel === 'advanced') {
             const topRated = baseSections.splice(2, 1)[0];
             baseSections.unshift(topRated);
@@ -131,24 +124,22 @@ export function HomeView({
         return baseSections;
     }, [personalizationLevel, hasMounted, trendingPlaces, latestPlaces, topRatedPlaces]);
 
+    // Extract specific ads
+    const announcement = useMemo(() => promotions.find(p => p.type === 'platform_announcement'), [promotions]);
+    const homeTopAds = useMemo(() => promotions.filter(p => p.placement === 'home_top' && p.type !== 'platform_announcement'), [promotions]);
+    const homeMiddleAds = useMemo(() => promotions.filter(p => p.placement === 'home_middle'), [promotions]);
+    const homeBottomAds = useMemo(() => promotions.filter(p => p.placement === 'home_bottom'), [promotions]);
+
     return (
         <div className="pb-12">
-            {/* Live City Pulse Ticker */}
+            {announcement && <PlatformAnnouncement announcement={announcement} />}
             <CityPulseTicker items={pulseItems} />
 
-            {/* Hero Section - Search & Welcome */}
-            <section className="relative h-[500px] flex items-center justify-center bg-gradient-to-br from-primary to-blue-600 dark:from-slate-950 dark:to-slate-900 text-white">
-                {/* Background Pattern Container - Clips only background elements */}
-                <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                    <div className="absolute inset-0 bg-[url('/images/hero-bg.png')] bg-cover bg-center opacity-30"></div>
-                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-primary/20"></div>
+            {/* Hero Section */}
+            <section className="relative h-[500px] flex items-center justify-center bg-gradient-to-br from-primary to-blue-600 dark:from-slate-950 dark:to-slate-900 text-white overflow-hidden">
+                <div className="absolute inset-0 bg-[url('/images/hero-bg.png')] bg-cover bg-center opacity-30"></div>
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-primary/20"></div>
 
-                    {/* Animated Circles */}
-                    <div className="absolute top-20 left-10 w-72 h-72 bg-white/10 rounded-full blur-3xl animate-pulse"></div>
-                    <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-300/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
-                </div>
-
-                {/* Content */}
                 <div className="relative z-10 text-center px-4 max-w-4xl mx-auto space-y-8">
                     <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full border border-white/20 mb-4">
                         <Sparkles size={16} className="text-yellow-300" />
@@ -164,7 +155,6 @@ export function HomeView({
                         كل اللي بتدور عليه.. مطاعم، كافيهات، أو خدمات.. في مكان واحد
                     </p>
 
-                    {/* Smart Search Bar */}
                     <div className="max-w-2xl mx-auto w-full mb-6 relative">
                         <div className="bg-white/10 dark:bg-black/20 backdrop-blur-xl p-1.5 rounded-full border border-white/20 dark:border-white/10 shadow-2xl relative z-[60] transition-all duration-300 hover:border-white/40 focus-within:ring-4 focus-within:ring-white/20 focus-within:border-white/50">
                             <HeaderSearchBar containerClassName="max-w-none" variant="ghost" />
@@ -173,28 +163,40 @@ export function HomeView({
                 </div>
             </section>
 
-            {/* Interactive: Quick Discovery Icons (Dynamic & Circular) */}
+            {/* Top Ads */}
+            {homeTopAds.length > 0 && (
+                <div className="container mx-auto px-4 mt-8">
+                    <AdCarousel ads={homeTopAds} />
+                </div>
+            )}
+
             <QuickDiscoveryGrid categories={heroSuggestions} />
 
-            {/* Unified Info Strip - Positioned below categories */}
             <div className="container mx-auto px-4 mt-6 mb-6 relative z-10">
                 <UnifiedInfoStrip weather={weather} prayerTimes={prayerTimes} />
             </div>
 
-            {/* Personalized: Recently Viewed */}
             <RecentlyViewedSection />
 
-            {/* Smart: Personalized Recommendations based on Spy Engine */}
             <div className="mt-8">
                 <PersonalizedSection />
             </div>
 
-            {/* Smart Sections - Dynamically Ordered */}
-            <div className="space-y-10 md:space-y-12 mt-8">
-                {sections.map((section: { id: string, content: React.ReactNode }) => section.content)}
+            {/* Middle Ads */}
+            {homeMiddleAds.length > 0 && (
+                <div className="container mx-auto px-4 mt-8">
+                    <AdCarousel ads={homeMiddleAds} />
+                </div>
+            )}
 
-                {/* Upcoming Events Grid */}
-                {/* Upcoming Events Grid - Converted to Horizontal Scroll */}
+            <div className="space-y-10 md:space-y-12 mt-8">
+                {sections.map(section => (
+                    <React.Fragment key={section.id}>
+                        {section.content}
+                    </React.Fragment>
+                ))}
+
+                {/* Events */}
                 {events.length > 0 && (
                     <div className="space-y-8">
                         <section className="container mx-auto px-4">
@@ -217,7 +219,7 @@ export function HomeView({
                     </div>
                 )}
 
-                {/* Featured Places - Converted to Horizontal Scroll */}
+                {/* Featured Places */}
                 <HorizontalScroll
                     title="أماكن مميزة ليك"
                     subtitle="مختارات خاصة من دليل السويس لأحسن أماكن في المدينة"
@@ -228,17 +230,23 @@ export function HomeView({
                     ))}
                 </HorizontalScroll>
 
-                {/* Latest Marketplace Ads - The Bridge */}
+                {/* Marketplace Ads */}
                 <LatestAdsSection initialItems={marketplaceAds} initialSortType="random" />
+
+                {/* Bottom Ads */}
+                {homeBottomAds.length > 0 && (
+                    <div className="container mx-auto px-4 mt-8">
+                        <AdCarousel ads={homeBottomAds} />
+                    </div>
+                )}
 
                 <div className="py-2">
                     <HomeNewsSection articles={latestArticles} />
                 </div>
 
-                {/* Community Section */}
                 <CommunityHomeSection questions={communityQuestions} />
 
-                {/* Footer Suggestions - Relocated for cleaner Hero */}
+                {/* Footer Suggestions */}
                 <div className="container mx-auto px-4 py-8 border-t border-border/50">
                     <div className="flex flex-col items-center text-center space-y-6">
                         <div className="space-y-2">

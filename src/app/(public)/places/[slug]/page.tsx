@@ -5,6 +5,7 @@ import { createReadOnlyClient } from "@/lib/supabase/server";
 import { Metadata } from "next";
 import { PlaceMapper } from "@/data/mappers/place.mapper";
 import { cache } from "react";
+import { getPlacePromotionsAction } from "@/actions/flash-deals.actions";
 
 export const revalidate = 3600;
 
@@ -94,7 +95,7 @@ export default async function PlaceDetailsPage({
     }
 
     // 2. Fetch public data in parallel using Static/ReadOnly Client
-    const [reviews, ratingStats, relatedPlacesData] = await Promise.all([
+    const [reviews, ratingStats, relatedPlacesData, promotions] = await Promise.all([
         getPlaceReviewsUseCase.execute(place.id, undefined, supabase),
         getPlaceRatingStatsUseCase.execute(place.id, supabase),
         supabase
@@ -103,7 +104,8 @@ export default async function PlaceDetailsPage({
             .eq('category_id', place.categoryId)
             .eq('status', 'active')
             .neq('id', place.id)
-            .limit(4)
+            .limit(4),
+        getPlacePromotionsAction(place.id)
     ])
 
     const related = PlaceMapper.toEntities(relatedPlacesData.data);
@@ -119,6 +121,7 @@ export default async function PlaceDetailsPage({
                 relatedPlaces={related}
                 reviews={reviews}
                 ratingStats={ratingStats}
+                promotions={promotions}
             // Notice: currentUserId and userReview are omitted here
             // They will be fetched client-side inside PlaceDetailsView
             />

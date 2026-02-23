@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 import { PlaceMapper } from "@/data/mappers/place.mapper"
-import { requireAdmin } from "@/lib/supabase/auth-utils"
+import { requireAdmin, requireSuperAdmin } from "@/lib/supabase/auth-utils"
 
 export async function getAdminPlacesAction(filters?: {
     status?: string
@@ -45,7 +45,7 @@ export async function getAdminPlacesAction(filters?: {
 
 export async function transferPlaceOwnershipAction(placeId: string, newOwnerId: string) {
     try {
-        const { user: adminUser } = await requireAdmin()
+        const { user: adminUser } = await requireSuperAdmin()
         const supabase = await createClient()
 
         // تحديث مالك المكان

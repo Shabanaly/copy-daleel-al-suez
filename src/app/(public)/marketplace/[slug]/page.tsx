@@ -14,6 +14,7 @@ import { MarketplaceReportAction } from '@/presentation/components/marketplace/m
 import { ItemViewTracker } from '@/presentation/components/marketplace/item-view-tracker';
 import type { Metadata } from 'next';
 import { getCachedMarketplaceItem, getCachedMarketplaceItems } from '@/actions/marketplace.actions';
+import { getItemPromotionsAction } from '@/actions/flash-deals.actions';
 
 export const revalidate = 120; // ISR: إعادة التحقق كل دقيقتين
 
@@ -62,12 +63,15 @@ export default async function MarketplaceItemPage({ params }: { params: Promise<
         notFound();
     }
 
-    // Fetch related items (same category, excluding current item) in parallel
-    const { items: relatedItems } = await getCachedMarketplaceItems(
-        { category: item.category as any },
-        5, // limit slightly more to filter current
-        0  // offset
-    );
+    // Fetch related items and promotions in parallel
+    const [{ items: relatedItems }, promotions] = await Promise.all([
+        getCachedMarketplaceItems(
+            { category: item.category as any },
+            5,
+            0
+        ),
+        getItemPromotionsAction(item.id)
+    ]);
     const filteredRelated = relatedItems.filter(r => r.id !== item.id).slice(0, 4);
 
     const timeAgo = (date: string) => {
@@ -113,7 +117,7 @@ export default async function MarketplaceItemPage({ params }: { params: Promise<
                     {/* Right Column: Details */}
                     <div className="lg:col-span-2 space-y-6">
                         {/* Description & Specs */}
-                        <MarketplaceItemDetails item={item} />
+                        <MarketplaceItemDetails item={item} promotions={promotions} />
                     </div>
 
                     {/* Left Column: Price & Seller Info */}

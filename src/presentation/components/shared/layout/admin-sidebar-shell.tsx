@@ -27,6 +27,7 @@ import {
     Layers,
     Activity,
     Mail,
+    Megaphone,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -108,6 +109,7 @@ function getConfig(variant: AdminNavProps['variant'], isSuperAdmin?: boolean, co
                         { name: 'إدارة الأماكن', href: '/content-admin/places', icon: MapPin, count: counts?.places },
                         { name: 'إدارة السوق', href: '/content-admin/marketplace', icon: ShoppingBag, count: counts?.marketplace },
                         { name: 'إشراف المجتمع', href: '/content-admin/community', icon: MessageSquare },
+                        { name: 'إدارة الإعلانات', href: '/content-admin/ads', icon: Megaphone },
                         { name: 'الأخبار والفعاليات', href: '/content-admin/news', icon: Newspaper },
                         { name: 'طلبات التوثيق', href: '/content-admin/claims', icon: Key, count: counts?.claims },
                     ],
@@ -135,6 +137,7 @@ function getConfig(variant: AdminNavProps['variant'], isSuperAdmin?: boolean, co
                     { name: 'إدارة التصنيفات', href: '/admin/categories', icon: Layers },
                     { name: 'البلاغات', href: '/admin/reports', icon: Flag, count: counts?.reports },
                     { name: 'رسائل التواصل', href: '/admin/contact', icon: Mail },
+                    { name: 'الإعلانات والترويج', href: '/admin/ads', icon: Megaphone },
                     { name: 'نبض السويس', href: '/admin/city-pulse', icon: Activity },
                     { name: 'إعدادات الموقع', href: '/admin/settings', icon: Settings },
                 ],

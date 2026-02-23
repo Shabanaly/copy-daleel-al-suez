@@ -21,12 +21,15 @@ import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { ConfirmDialog } from '@/presentation/components/ui/ConfirmDialog';
 
+import { getUsersAction } from '@/actions/admin-users.actions';
+
 interface PlacesManagementProps {
     initialPlaces: Place[];
     categories: { id: string; name: string }[];
+    isSuperAdmin?: boolean;
 }
 
-export function PlacesManagement({ initialPlaces, categories }: PlacesManagementProps) {
+export function PlacesManagement({ initialPlaces, categories, isSuperAdmin = false }: PlacesManagementProps) {
     const router = useRouter();
     const [isPending, startTransition] = useTransition();
     const [searchQuery, setSearchQuery] = useState('');
@@ -34,7 +37,13 @@ export function PlacesManagement({ initialPlaces, categories }: PlacesManagement
     const [categoryFilter, setCategoryFilter] = useState('all');
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [expandedPlaceId, setExpandedPlaceId] = useState<string | null>(null);
-    const [ownershipInput, setOwnershipInput] = useState<Record<string, string>>({});
+    const [ownershipInput, setOwnershipInput] = useState<Record<string, { id: string, name: string } | null>>({});
+
+    // User Search State
+    const [userSearchQuery, setUserSearchQuery] = useState('');
+    const [userSearchResults, setUserSearchResults] = useState<any[]>([]);
+    const [isSearchingUsers, setIsSearchingUsers] = useState(false);
+    const [showUserDropdown, setShowUserDropdown] = useState<string | null>(null);
 
     // Dialog state
     const [confirmOpen, setConfirmOpen] = useState(false);
@@ -57,6 +66,26 @@ export function PlacesManagement({ initialPlaces, categories }: PlacesManagement
     }, [initialPlaces, searchQuery, statusFilter, categoryFilter]);
 
     // Handlers
+    const handleUserSearch = async (query: string) => {
+        setUserSearchQuery(query);
+
+        setIsSearchingUsers(true);
+        try {
+            const result = await getUsersAction({ search: query || undefined, limit: 5 });
+            console.log("getUsersAction payload:", result);
+            if (result.success && result.users) {
+                setUserSearchResults(result.users);
+            } else {
+                console.error("Server action failed:", result);
+                setUserSearchResults([]);
+            }
+        } catch (error) {
+            console.error('Error searching users:', error);
+        } finally {
+            setIsSearchingUsers(false);
+        }
+    };
+
     const handleStatusUpdate = (id: string, status: 'active' | 'pending' | 'inactive') => {
         startTransition(async () => {
             const result = await updatePlaceStatusAction(id, status);
@@ -142,20 +171,22 @@ export function PlacesManagement({ initialPlaces, categories }: PlacesManagement
     };
 
     const handleTransferOwnership = (placeId: string, currentOwner?: string) => {
-        const newOwnerId = ownershipInput[placeId]?.trim();
-        if (!newOwnerId) {
-            toast.error('يرجى إدخال معرف المستخدم الجديد أولاً');
+        const newOwner = ownershipInput[placeId];
+        if (!newOwner || !newOwner.id) {
+            toast.error('يرجى اختيار مستخدم أولاً');
             return;
         }
 
         setConfirmConfig({
             title: 'نقل ملكية المكان',
-            description: `هل أنت متأكد من نقل ملكية هذا المكان إلى المستخدم بالمعرف: ${newOwnerId}؟`,
+            description: `هل أنت متأكد من نقل ملكية هذا المكان إلى المالك الجديد: ${newOwner.name}؟`,
             variant: 'warning',
             onConfirm: async () => {
-                const result = await transferPlaceOwnershipAction(placeId, newOwnerId);
+                const result = await transferPlaceOwnershipAction(placeId, newOwner.id);
                 if (result.success) {
                     toast.success(result.message);
+                    setOwnershipInput(prev => ({ ...prev, [placeId]: null }));
+                    setShowUserDropdown(null);
                     router.refresh();
                 } else {
                     toast.error(result.message);
@@ -270,7 +301,7 @@ export function PlacesManagement({ initialPlaces, categories }: PlacesManagement
                 ) : (
                     filteredPlaces.map(place => (
                         <div key={place.id} className={cn(
-                            "bg-card rounded-2xl border border-border overflow-hidden transition-all duration-200",
+                            "bg-card rounded-2xl border border-border transition-all duration-200",
                             selectedIds.includes(place.id) ? "border-primary/40 bg-primary/5 shadow-inner" : "hover:shadow-md hover:border-primary/20"
                         )}>
                             <div className="p-4 flex items-center gap-4">
@@ -389,33 +420,102 @@ export function PlacesManagement({ initialPlaces, categories }: PlacesManagement
                                                 </Link>
                                             </div>
 
-                                            <div className="mt-4 space-y-2 bg-muted/40 border border-border/60 rounded-xl p-3">
-                                                <h4 className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">
-                                                    نقل الملكية (اختياري)
-                                                </h4>
-                                                <p className="text-[10px] text-muted-foreground mb-2">
-                                                    يمكن ربط هذا المكان بمستخدم محدد عن طريق إدخال معرف المستخدم (User ID). هذا لا يغير الرتبة، فقط يربط المكان بحسابه في لوحة أنشطته.
-                                                </p>
-                                                <div className="flex flex-col sm:flex-row gap-2">
-                                                    <input
-                                                        type="text"
-                                                        value={ownershipInput[place.id] ?? ''}
-                                                        onChange={(e) =>
-                                                            setOwnershipInput(prev => ({ ...prev, [place.id]: e.target.value }))
-                                                        }
-                                                        placeholder={place.ownerId || 'معرف المستخدم الجديد (UUID)'}
-                                                        className="flex-1 px-3 py-2 bg-background border border-border rounded-lg text-[11px] font-mono outline-none focus:ring-1 focus:ring-primary"
-                                                    />
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleTransferOwnership(place.id, place.ownerId)}
-                                                        disabled={isPending}
-                                                        className="px-3 py-2 bg-primary text-primary-foreground rounded-lg text-[11px] font-black hover:brightness-110 disabled:opacity-50"
-                                                    >
-                                                        حفظ المالك
-                                                    </button>
+                                            {isSuperAdmin && (
+                                                <div className="mt-4 space-y-2 bg-muted/40 border border-border/60 rounded-xl p-3">
+                                                    <h4 className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">
+                                                        نقل الملكية (سوبر أدمن فقط)
+                                                    </h4>
+                                                    <p className="text-[10px] text-muted-foreground mb-2">
+                                                        يمكن ربط هذا المكان بمستخدم محدد عن طريق البحث عن اسمه أو بريده الإلكتروني.
+                                                    </p>
+
+                                                    <div className="relative flex flex-col sm:flex-row gap-2">
+                                                        <div className="flex-1 relative">
+                                                            {ownershipInput[place.id] ? (
+                                                                <div className="flex items-center justify-between px-3 py-2 bg-primary/10 border border-primary/20 rounded-lg text-[11px] font-bold text-primary">
+                                                                    <span>{ownershipInput[place.id]?.name}</span>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setOwnershipInput(prev => ({ ...prev, [place.id]: null }))}
+                                                                        className="hover:text-primary-foreground hover:bg-primary/80 rounded-full p-0.5"
+                                                                    >
+                                                                        <XCircle size={14} />
+                                                                    </button>
+                                                                </div>
+                                                            ) : (
+                                                                <>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            const isOpening = showUserDropdown !== place.id;
+                                                                            setShowUserDropdown(isOpening ? place.id : null);
+                                                                            if (isOpening) {
+                                                                                handleUserSearch('');
+                                                                            }
+                                                                        }}
+                                                                        className="w-full flex justify-between items-center px-3 py-2 bg-background border border-border rounded-lg text-[11px] font-bold text-muted-foreground hover:bg-muted/50 transition-colors focus:ring-1 focus:ring-primary outline-none"
+                                                                    >
+                                                                        <span>{place.ownerId ? 'تغيير المالك...' : 'اختر مستخدم'}</span>
+                                                                        <ChevronDown size={14} className={cn("transition-transform duration-200", showUserDropdown === place.id && "rotate-180")} />
+                                                                    </button>
+
+                                                                    {showUserDropdown === place.id && (
+                                                                        <div className="absolute top-[calc(100%+8px)] left-0 right-0 bg-card border border-border rounded-xl shadow-2xl z-[100] flex flex-col min-w-[250px]">
+                                                                            <div className="p-2 border-b border-border/50 bg-muted/20">
+                                                                                <div className="relative">
+                                                                                    <Search className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground w-3 h-3" />
+                                                                                    <input
+                                                                                        type="text"
+                                                                                        value={userSearchQuery}
+                                                                                        onChange={(e) => handleUserSearch(e.target.value)}
+                                                                                        placeholder="ابحث بالاسم أو البريد..."
+                                                                                        className="w-full pr-7 pl-3 py-1.5 bg-background border border-border rounded text-[11px] font-bold outline-none focus:ring-1 focus:ring-primary"
+                                                                                        autoFocus
+                                                                                    />
+                                                                                </div>
+                                                                            </div>
+
+                                                                            <div className="max-h-48 overflow-y-auto w-full">
+                                                                                {isSearchingUsers ? (
+                                                                                    <div className="p-4 text-center text-[10px] text-muted-foreground font-bold flex items-center justify-center gap-2">
+                                                                                        <Loader2 size={12} className="animate-spin" /> جاري التحميل...
+                                                                                    </div>
+                                                                                ) : userSearchResults.length > 0 ? (
+                                                                                    userSearchResults.map(user => (
+                                                                                        <button
+                                                                                            key={user.id}
+                                                                                            type="button"
+                                                                                            onClick={() => {
+                                                                                                setOwnershipInput(prev => ({ ...prev, [place.id]: { id: user.id, name: user.full_name } }));
+                                                                                                setShowUserDropdown(null);
+                                                                                                setUserSearchQuery('');
+                                                                                            }}
+                                                                                            className="w-full text-right px-3 py-2.5 hover:bg-muted/50 border-b border-border/40 last:border-0 transition-colors flex flex-col gap-0.5"
+                                                                                        >
+                                                                                            <span className="text-[11px] font-bold text-foreground">{user.full_name}</span>
+                                                                                            <span className="text-[9px] font-medium text-muted-foreground">{user.email}</span>
+                                                                                        </button>
+                                                                                    ))
+                                                                                ) : (
+                                                                                    <div className="p-4 text-center text-[10px] text-muted-foreground font-bold">لم يتم العثور على مستخدمين</div>
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleTransferOwnership(place.id, place.ownerId)}
+                                                            disabled={isPending || !ownershipInput[place.id]}
+                                                            className="px-3 py-2 bg-primary text-primary-foreground rounded-lg text-[11px] font-black hover:brightness-110 disabled:opacity-50"
+                                                        >
+                                                            تأكيد הנقل
+                                                        </button>
+                                                    </div>
                                                 </div>
-                                            </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

@@ -17,6 +17,7 @@ export default async function Home() {
     pulseItems,
     communityQuestions,
     marketplaceAds,
+    promotions,
   } = data;
 
   return (
@@ -34,6 +35,7 @@ export default async function Home() {
       pulseItems={pulseItems}
       communityQuestions={communityQuestions}
       marketplaceAds={marketplaceAds}
+      promotions={promotions}
     />
   );
 }

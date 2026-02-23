@@ -66,7 +66,7 @@ export function DiscoverSection({ items }: { items: MarketplaceItem[] }) {
 export function ContinueBrowsingSection({ items }: { items: MarketplaceItem[] }) {
     if (!items?.length) return null
     return (
-        <section className="py-2 bg-slate-50/50 -mx-4 px-4 md:mx-0 md:px-0 md:bg-transparent rounded-xl">
+        <section className="py-2 bg-muted/30 -mx-4 px-4 md:mx-0 md:px-0 md:bg-transparent rounded-xl">
             <SectionHeader title="شاهدته مؤخراً" icon={Clock} />
             <div className="flex overflow-x-auto snap-x snap-mandatory gap-3 pb-4 -mx-4 px-4 scrollbar-hide">
                 {items.map(item => (

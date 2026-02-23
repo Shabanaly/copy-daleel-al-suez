@@ -121,6 +121,9 @@ export async function createFlashDealAction(data: CreateFlashDealDTO) {
     }
 
     try {
+        if (!data.placeId) {
+            throw new Error('معرف المكان مطلوب')
+        }
         // Security check
         const place = await placeRepository.getPlaceById(data.placeId)
         if (!place || (place.ownerId !== user.id && place.createdBy !== user.id)) {

@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight, MapPin, Star, Clock, Tag, Eye, LayoutDashboard } from "lucide-react";
+import { ArrowRight, MapPin, Star, Clock, Tag, Eye, LayoutDashboard, Sparkles } from "lucide-react";
 import { ViewTracker } from "@/presentation/components/shared/view-tracker";
 import { Place } from "@/domain/entities/place";
+import { FlashDeal } from "@/domain/entities/flash-deal";
 import { Review, ReviewStats } from "@/domain/entities/review";
 import { PlaceImageSlider } from "@/presentation/features/places/components/place-image-slider";
 import { PlaceActionButtons } from "@/presentation/features/places/components/place-action-buttons";
@@ -31,6 +32,7 @@ interface PlaceDetailsViewProps {
     ratingStats: ReviewStats;
     currentUserId?: string;
     userReview?: Review | null;
+    promotions?: FlashDeal[];
 }
 
 export function PlaceDetailsView({
@@ -39,7 +41,8 @@ export function PlaceDetailsView({
     reviews,
     ratingStats,
     currentUserId: initialUserId,
-    userReview: initialUserReview
+    userReview: initialUserReview,
+    promotions = []
 }: PlaceDetailsViewProps) {
     useSpyOnPlace(place.id, place.categorySlug);
 
@@ -206,6 +209,59 @@ export function PlaceDetailsView({
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Left Column - Main Info */}
                     <div className="lg:col-span-2 space-y-6">
+                        {/* Promotions Section */}
+                        {promotions.length > 0 && (
+                            <div className="space-y-4">
+                                <h2 className="text-2xl font-black text-rose-500 flex items-center gap-2 px-1">
+                                    <Sparkles size={24} className="animate-pulse" />
+                                    عروض وخصومات حصرية
+                                </h2>
+                                <div className="grid grid-cols-1 gap-4">
+                                    {promotions.map(promo => (
+                                        <div key={promo.id} className="group relative bg-gradient-to-br from-rose-50 to-orange-50 dark:from-rose-950/20 dark:to-orange-950/20 rounded-3xl p-1 border border-rose-200/50 dark:border-rose-800/30 overflow-hidden shadow-sm hover:shadow-md transition-all">
+                                            <div className="bg-card rounded-[1.4rem] overflow-hidden flex flex-col md:flex-row gap-4 p-4">
+                                                {promo.imageUrl && (
+                                                    <div className="relative w-full md:w-48 h-32 shrink-0 rounded-2xl overflow-hidden">
+                                                        <Image
+                                                            src={promo.imageUrl}
+                                                            alt={promo.title}
+                                                            fill
+                                                            className="object-cover transition-transform duration-500 group-hover:scale-110"
+                                                        />
+                                                    </div>
+                                                )}
+                                                <div className="flex-1 flex flex-col justify-center space-y-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <Badge className="bg-rose-500 text-white border-0 text-[10px] sm:text-xs">
+                                                            {promo.discountPercentage ? `وفر ${promo.discountPercentage}%` : 'عرض خاص'}
+                                                        </Badge>
+                                                        {promo.type === 'place_deal' && <Badge variant="outline" className="text-[10px]">قسيمة خصم</Badge>}
+                                                    </div>
+                                                    <h3 className="text-xl font-bold text-foreground leading-tight">{promo.title}</h3>
+                                                    {promo.description && <p className="text-sm text-muted-foreground line-clamp-2">{promo.description}</p>}
+
+                                                    <div className="flex items-center gap-4 mt-2">
+                                                        {promo.dealPrice && (
+                                                            <div className="flex flex-col">
+                                                                <span className="text-2xl font-black text-rose-600 dark:text-rose-400">{promo.dealPrice} ج.م</span>
+                                                                {promo.originalPrice && <span className="text-xs text-muted-foreground line-through">{promo.originalPrice} ج.م</span>}
+                                                            </div>
+                                                        )}
+                                                        <Link
+                                                            href={promo.targetUrl || '#'}
+                                                            className="mr-auto bg-rose-500 text-white px-6 py-2 rounded-xl font-bold hover:bg-rose-600 transition-colors shadow-lg shadow-rose-500/20 text-sm"
+                                                        >
+                                                            احصل على العرض
+                                                        </Link>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         {/* Top row: About & Rating side by side on desktop */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {/* About Section */}

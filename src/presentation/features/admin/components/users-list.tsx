@@ -97,6 +97,104 @@ export function UsersList({ initialUsers, totalCount, currentPage, totalPages }:
         router.push(`/admin/users?${params.toString()}`)
     }
 
+    const superAdmins = initialUsers.filter(u => u.role === 'super_admin')
+    const admins = initialUsers.filter(u => u.role === 'admin')
+    const standardUsers = initialUsers.filter(u => u.role === 'user')
+
+    const renderUserRow = (user: any) => (
+        <tr key={user.id} className={cn("hover:bg-muted/30 transition-colors", user.is_banned && "bg-rose-50/10 opacity-70")}>
+            <td className="px-6 py-4 whitespace-nowrap">
+                <div className="flex items-center gap-3">
+                    <Avatar className="h-10 w-10 border border-border shadow-sm">
+                        <AvatarImage src={user.avatar_url} />
+                        <AvatarFallback className="bg-primary/5 text-primary text-[10px] font-black uppercase">
+                            {user.full_name?.substring(0, 2) || "U"}
+                        </AvatarFallback>
+                    </Avatar>
+                    <div className="flex flex-col">
+                        <div className="text-sm font-black text-foreground">{user.full_name}</div>
+                        <div className="text-[10px] text-muted-foreground font-medium">{user.email}</div>
+                    </div>
+                </div>
+            </td>
+            <td className="px-6 py-4 whitespace-nowrap">
+                {(() => {
+                    const currentRole = ROLES.find(r => r.value === user.role) || ROLES[0]
+                    const RoleIcon = currentRole.icon
+                    return (
+                        <span className={cn(
+                            "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black border",
+                            currentRole.color.replace('text', 'bg').replace('500', '50/50'),
+                            currentRole.color
+                        )}>
+                            <RoleIcon size={12} />
+                            {currentRole.label}
+                        </span>
+                    )
+                })()}
+            </td>
+            <td className="px-6 py-4 whitespace-nowrap">
+                {user.is_banned ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-rose-100 text-rose-700 text-[10px] font-bold">محظور</span>
+                ) : (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-green-100 text-green-700 text-[10px] font-bold">نشط</span>
+                )}
+            </td>
+            <td className="px-6 py-4 whitespace-nowrap">
+                <div className="text-xs text-muted-foreground font-medium">
+                    {new Date(user.created_at).toLocaleDateString('ar-EG')}
+                </div>
+            </td>
+            <td className="px-6 py-4 whitespace-nowrap text-center">
+                <div className="flex items-center justify-center gap-2">
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm" className="h-8 px-3 text-[10px] font-black gap-1.5">
+                                تعديل الرتبة
+                                <UserCog size={12} className="text-muted-foreground" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-[220px] p-2 rounded-2xl shadow-xl border-border">
+                            <div className="flex flex-col gap-1">
+                                {ROLES.map((role) => (
+                                    <DropdownMenuItem
+                                        key={role.value}
+                                        onClick={() => handleRoleChange(user.id, role.value)}
+                                        className={cn(
+                                            "flex flex-col items-start gap-1 p-2 rounded-xl text-right transition-colors cursor-pointer",
+                                            user.role === role.value ? "bg-primary/5 text-primary" : "text-foreground"
+                                        )}
+                                    >
+                                        <div className="flex items-center gap-2 text-[10px] font-black w-full">
+                                            <role.icon size={14} className={role.color} />
+                                            <span>{role.label}</span>
+                                            {user.role === role.value && <div className="mr-auto w-1.5 h-1.5 rounded-full bg-primary" />}
+                                        </div>
+                                        <div className="text-[9px] text-muted-foreground font-medium pr-5 leading-tight">
+                                            {role.description}
+                                        </div>
+                                    </DropdownMenuItem>
+                                ))}
+                            </div>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    <Button
+                        onClick={() => handleToggleBan(user)}
+                        variant="ghost"
+                        size="icon"
+                        className={cn(
+                            "h-8 w-8 transition-colors",
+                            user.is_banned ? "text-green-600 hover:bg-green-50" : "text-rose-500 hover:bg-rose-50"
+                        )}
+                    >
+                        {user.is_banned ? <CheckCircle size={16} /> : <Ban size={16} />}
+                    </Button>
+                </div>
+            </td>
+        </tr>
+    );
+
     return (
         <div className="space-y-6">
             <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
@@ -161,99 +259,46 @@ export function UsersList({ initialUsers, totalCount, currentPage, totalPages }:
                                     </td>
                                 </tr>
                             ) : (
-                                initialUsers.map((user) => (
-                                    <tr key={user.id} className={cn("hover:bg-muted/30 transition-colors", user.is_banned && "bg-rose-50/10 opacity-70")}>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="flex items-center gap-3">
-                                                <Avatar className="h-10 w-10 border border-border shadow-sm">
-                                                    <AvatarImage src={user.avatar_url} />
-                                                    <AvatarFallback className="bg-primary/5 text-primary text-[10px] font-black uppercase">
-                                                        {user.full_name?.substring(0, 2) || "U"}
-                                                    </AvatarFallback>
-                                                </Avatar>
-                                                <div className="flex flex-col">
-                                                    <div className="text-sm font-black text-foreground">{user.full_name}</div>
-                                                    <div className="text-[10px] text-muted-foreground font-medium">{user.email}</div>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            {(() => {
-                                                const currentRole = ROLES.find(r => r.value === user.role) || ROLES[0]
-                                                const RoleIcon = currentRole.icon
-                                                return (
-                                                    <span className={cn(
-                                                        "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black border",
-                                                        currentRole.color.replace('text', 'bg').replace('500', '50/50'),
-                                                        currentRole.color
-                                                    )}>
-                                                        <RoleIcon size={12} />
-                                                        {currentRole.label}
+                                <>
+                                    {superAdmins.length > 0 && (
+                                        <>
+                                            <tr className="bg-muted/10 border-y border-border">
+                                                <td colSpan={5} className="px-6 py-2">
+                                                    <span className="text-xs font-black text-rose-500 uppercase tracking-wider flex items-center gap-2">
+                                                        <UserCog size={14} /> مديرو النظام (Super Admins)
                                                     </span>
-                                                )
-                                            })()}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            {user.is_banned ? (
-                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-rose-100 text-rose-700 text-[10px] font-bold">محظور</span>
-                                            ) : (
-                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-green-100 text-green-700 text-[10px] font-bold">نشط</span>
-                                            )}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-xs text-muted-foreground font-medium">
-                                                {new Date(user.created_at).toLocaleDateString('ar-EG')}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-center">
-                                            <div className="flex items-center justify-center gap-2">
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="outline" size="sm" className="h-8 px-3 text-[10px] font-black gap-1.5">
-                                                            تعديل الرتبة
-                                                            <UserCog size={12} className="text-muted-foreground" />
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end" className="w-[220px] p-2 rounded-2xl shadow-xl border-border">
-                                                        <div className="flex flex-col gap-1">
-                                                            {ROLES.map((role) => (
-                                                                <DropdownMenuItem
-                                                                    key={role.value}
-                                                                    onClick={() => handleRoleChange(user.id, role.value)}
-                                                                    className={cn(
-                                                                        "flex flex-col items-start gap-1 p-2 rounded-xl text-right transition-colors cursor-pointer",
-                                                                        user.role === role.value ? "bg-primary/5 text-primary" : "text-foreground"
-                                                                    )}
-                                                                >
-                                                                    <div className="flex items-center gap-2 text-[10px] font-black w-full">
-                                                                        <role.icon size={14} className={role.color} />
-                                                                        <span>{role.label}</span>
-                                                                        {user.role === role.value && <div className="mr-auto w-1.5 h-1.5 rounded-full bg-primary" />}
-                                                                    </div>
-                                                                    <div className="text-[9px] text-muted-foreground font-medium pr-5 leading-tight">
-                                                                        {role.description}
-                                                                    </div>
-                                                                </DropdownMenuItem>
-                                                            ))}
-                                                        </div>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
+                                                </td>
+                                            </tr>
+                                            {superAdmins.map(renderUserRow)}
+                                        </>
+                                    )}
 
-                                                <Button
-                                                    onClick={() => handleToggleBan(user)}
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className={cn(
-                                                        "h-8 w-8 transition-colors",
-                                                        user.is_banned ? "text-green-600 hover:bg-green-50" : "text-rose-500 hover:bg-rose-50"
-                                                    )}
-                                                >
-                                                    {user.is_banned ? <CheckCircle size={16} /> : <Ban size={16} />}
-                                                </Button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
+                                    {admins.length > 0 && (
+                                        <>
+                                            <tr className="bg-muted/10 border-y border-border">
+                                                <td colSpan={5} className="px-6 py-2">
+                                                    <span className="text-xs font-black text-purple-500 uppercase tracking-wider flex items-center gap-2">
+                                                        <ShieldCheck size={14} /> مشرفو المحتوى (Admins)
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                            {admins.map(renderUserRow)}
+                                        </>
+                                    )}
+
+                                    {standardUsers.length > 0 && (
+                                        <>
+                                            <tr className="bg-muted/10 border-y border-border">
+                                                <td colSpan={5} className="px-6 py-2">
+                                                    <span className="text-xs font-black text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                                                        <User size={14} /> المستخدمون (Users)
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                            {standardUsers.map(renderUserRow)}
+                                        </>
+                                    )}
+                                </>
                             )}
                         </tbody>
                     </table>

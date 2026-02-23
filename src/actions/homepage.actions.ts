@@ -13,6 +13,7 @@ import { getDynamicHeroSuggestions } from '@/actions/category.actions'
 import { getCachedQuestions } from '@/actions/community.actions'
 import { getCachedHomeAds } from '@/actions/marketplace.actions'
 import { getCachedActiveCityPulseItems } from '@/actions/city-pulse.actions'
+import { getActivePromotionsAction } from '@/actions/flash-deals.actions'
 
 export async function getUnifiedHomepageData() {
     return await unstable_cache(
@@ -28,6 +29,7 @@ export async function getUnifiedHomepageData() {
                 pulseItems,
                 communityQuestions,
                 marketplaceAds,
+                promotions,
             ] = await Promise.all([
                 getCachedHomepageData(),
                 getCachedCategoriesAction(),
@@ -39,6 +41,7 @@ export async function getUnifiedHomepageData() {
                 getCachedActiveCityPulseItems(),
                 getCachedQuestions({ sortBy: 'newest' }).then(qs => qs.slice(0, 3)),
                 getCachedHomeAds(6),
+                getActivePromotionsAction(),
             ])
 
             return {
@@ -52,12 +55,13 @@ export async function getUnifiedHomepageData() {
                 pulseItems,
                 communityQuestions,
                 marketplaceAds,
+                promotions,
             }
         },
         ['unified-homepage-data'],
         {
             revalidate: 3600,
-            tags: ['places', 'categories', 'events', 'articles', 'marketplace', 'city-pulse', 'community']
+            tags: ['places', 'categories', 'events', 'articles', 'marketplace', 'city-pulse', 'community', 'promotions', 'flash_deals']
         }
     )()
 }

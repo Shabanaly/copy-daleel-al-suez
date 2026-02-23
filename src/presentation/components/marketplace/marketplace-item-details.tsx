@@ -1,15 +1,20 @@
 'use client';
 
 import { MarketplaceItem } from '@/domain/entities/marketplace-item';
+import { FlashDeal } from '@/domain/entities/flash-deal';
+import Link from 'next/link';
 import { getFieldsForItem } from '@/config/marketplace-forms';
 import { cn } from '@/lib/utils';
-import { Check, Info, FileText, CheckCircle2, MapPin, Calendar, Tag } from 'lucide-react';
+import { Check, Info, FileText, CheckCircle2, MapPin, Calendar, Tag, Sparkles } from 'lucide-react';
+import Image from 'next/image';
+import { Badge } from '@/presentation/components/ui/Badge';
 
 interface MarketplaceItemDetailsProps {
     item: MarketplaceItem;
+    promotions?: FlashDeal[];
 }
 
-export function MarketplaceItemDetails({ item }: MarketplaceItemDetailsProps) {
+export function MarketplaceItemDetails({ item, promotions = [] }: MarketplaceItemDetailsProps) {
     // 1. Get the configuration for this item's specific category/sub-type
     const fields = getFieldsForItem(item.category, item.attributes || {});
 
@@ -91,6 +96,56 @@ export function MarketplaceItemDetails({ item }: MarketplaceItemDetailsProps) {
                 </span>
                 تفاصيل الإعلان
             </h2>
+
+            {/* Promotions Section */}
+            {promotions.length > 0 && (
+                <div className="mb-8 space-y-4">
+                    {promotions.map(promo => (
+                        <div key={promo.id} className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-rose-50 to-orange-50 dark:from-rose-950/20 dark:to-orange-950/20 border border-rose-200/50 dark:border-rose-800/30 p-1">
+                            <div className="bg-card rounded-[0.9rem] p-4 flex flex-col sm:flex-row gap-4">
+                                {promo.imageUrl && (
+                                    <div className="relative w-full sm:w-32 h-24 shrink-0 rounded-xl overflow-hidden shadow-sm">
+                                        <Image
+                                            src={promo.imageUrl}
+                                            alt={promo.title}
+                                            fill
+                                            className="object-cover"
+                                        />
+                                    </div>
+                                )}
+                                <div className="flex-1 flex flex-col justify-center">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <Badge className="bg-rose-500 text-white border-0 text-[10px]">عرض ترويجي</Badge>
+                                        {promo.discountPercentage && (
+                                            <span className="text-xs font-bold text-rose-600 dark:text-rose-400">خصم {promo.discountPercentage}%</span>
+                                        )}
+                                    </div>
+                                    <h3 className="font-black text-foreground text-lg leading-tight mb-1">{promo.title}</h3>
+                                    {promo.description && <p className="text-xs text-muted-foreground line-clamp-1 mb-2">{promo.description}</p>}
+
+                                    <div className="flex items-center justify-between">
+                                        {promo.dealPrice && (
+                                            <div className="flex items-baseline gap-2">
+                                                <span className="text-xl font-bold text-rose-600 dark:text-rose-400">{promo.dealPrice} ج.م</span>
+                                                {promo.originalPrice && <span className="text-xs text-muted-foreground line-through">{promo.originalPrice} ج.م</span>}
+                                            </div>
+                                        )}
+                                        {promo.targetUrl && (
+                                            <Link
+                                                href={promo.targetUrl}
+                                                className="text-xs font-bold text-rose-500 hover:underline flex items-center gap-1"
+                                            >
+                                                مشاهدة التفاصيل
+                                                <Sparkles size={12} />
+                                            </Link>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
 
             {/* Top Summary Chips - Always Visible Core Info */}
             <div className="flex flex-wrap gap-3 mb-8 pb-6 border-b border-border/50">

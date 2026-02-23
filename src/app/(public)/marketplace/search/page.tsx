@@ -3,6 +3,7 @@ import { MarketplaceItemCategory } from '@/domain/entities/marketplace-item';
 import { MarketplaceFilters } from '@/domain/repositories/marketplace.repository';
 import { createClient } from '@/lib/supabase/server';
 import { MarketplaceSearchResultsView } from '@/presentation/features/marketplace/marketplace-search-results-view';
+import { getActivePromotionsAction } from '@/actions/flash-deals.actions';
 
 export const dynamic = 'force-dynamic'; // بحث = بيانات متغيرة دائماً
 
@@ -45,7 +46,10 @@ export default async function MarketplaceSearchPage({ searchParams }: Marketplac
         attributes: Object.keys(attributes).length > 0 ? attributes : undefined,
     };
 
-    const { items } = await repository.getItems(filters);
+    const [{ items }, promotions] = await Promise.all([
+        repository.getItems(filters),
+        getActivePromotionsAction()
+    ]);
 
     // Map MarketplaceItem to MarketplaceSearchResult for the view component
     const mappedItems = items.map(item => ({
@@ -65,6 +69,7 @@ export default async function MarketplaceSearchPage({ searchParams }: Marketplac
             <MarketplaceSearchResultsView
                 initialItems={mappedItems}
                 initialFilters={filters}
+                promotions={promotions}
             />
         </div>
     );

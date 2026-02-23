@@ -8,6 +8,9 @@ import { MarketplaceItemCard } from '@/app/(public)/marketplace/components/marke
 import { Loader2, Search, Filter, SlidersHorizontal, LayoutGrid, List, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { MarketplaceSearchSidebar } from '@/presentation/features/marketplace/components/marketplace-search-sidebar'
+import { FlashDeal } from '@/domain/entities/flash-deal'
+import { NativeAdBanner } from '@/presentation/components/ads/native-ad-banner'
+import { AdSenseBlock } from '@/presentation/components/ads/adsense-block'
 
 interface MarketplaceSearchResultsViewProps {
     initialItems: MarketplaceSearchResult[]
@@ -20,6 +23,7 @@ interface MarketplaceSearchResultsViewProps {
     minPrice?: number | string
     maxPrice?: number | string
     categoriesWithCounts?: any[]
+    promotions?: FlashDeal[]
 }
 
 export function MarketplaceSearchResultsView({
@@ -30,7 +34,8 @@ export function MarketplaceSearchResultsView({
     areaId,
     districtId,
     minPrice,
-    maxPrice
+    maxPrice,
+    promotions = []
 }: MarketplaceSearchResultsViewProps) {
     const router = useRouter()
     const searchParams = useSearchParams()
@@ -95,6 +100,8 @@ export function MarketplaceSearchResultsView({
         updated_at: item.created_at
     })
 
+    // Prepare in-feed ads
+    const feedAds = useMemo(() => promotions.filter(p => p.placement === 'marketplace_feed'), [promotions]);
 
     return (
         <div className="container mx-auto px-4 py-8">
@@ -152,11 +159,33 @@ export function MarketplaceSearchResultsView({
                                 ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 md:gap-6 animate-in fade-in duration-500"
                                 : "flex flex-col gap-4 animate-in fade-in duration-500"
                         )}>
-                            {filteredItems.map(item => (
-                                <div key={item.id} className={cn(viewMode === 'list' && "w-full")}>
-                                    <MarketplaceItemCard item={mapToCardItem(item)} viewMode={viewMode} />
-                                </div>
-                            ))}
+                            {filteredItems.map((item, index) => {
+                                // Insert an ad every 5 items if available
+                                const adIndex = Math.floor(index / 5);
+                                const showAd = index > 0 && index % 5 === 0 && feedAds[adIndex];
+
+                                return (
+                                    <div key={item.id} className="contents">
+                                        {showAd && viewMode === 'grid' && (
+                                            <div className="col-span-full mb-4">
+                                                {feedAds[adIndex].type === 'native_ad' && <NativeAdBanner ad={feedAds[adIndex]} />}
+                                                {feedAds[adIndex].type === 'item_deal' && <NativeAdBanner ad={feedAds[adIndex]} />}
+                                                {feedAds[adIndex].type === 'adsense' && <AdSenseBlock ad={feedAds[adIndex]} />}
+                                            </div>
+                                        )}
+                                        {showAd && viewMode === 'list' && (
+                                            <div className="w-full mb-4">
+                                                {feedAds[adIndex].type === 'native_ad' && <NativeAdBanner ad={feedAds[adIndex]} />}
+                                                {feedAds[adIndex].type === 'item_deal' && <NativeAdBanner ad={feedAds[adIndex]} />}
+                                                {feedAds[adIndex].type === 'adsense' && <AdSenseBlock ad={feedAds[adIndex]} />}
+                                            </div>
+                                        )}
+                                        <div className={cn(viewMode === 'list' && "w-full")}>
+                                            <MarketplaceItemCard item={mapToCardItem(item)} viewMode={viewMode} />
+                                        </div>
+                                    </div>
+                                )
+                            })}
                         </div>
                     ) : (
                         <div className="bg-card rounded-3xl p-16 text-center shadow-sm border border-border flex flex-col items-center">

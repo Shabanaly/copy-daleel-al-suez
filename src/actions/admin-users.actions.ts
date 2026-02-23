@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { requireAdmin } from '@/lib/supabase/auth-utils'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 
 /**
@@ -26,7 +27,12 @@ export async function getUsersAction(params?: {
             .order('created_at', { ascending: false })
 
         if (search) {
-            query = query.or(`full_name.ilike.%${search}%,id.eq.${search},email.ilike.%${search}%`)
+            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            if (uuidRegex.test(search)) {
+                query = query.or(`full_name.ilike.%${search}%,id.eq.${search},email.ilike.%${search}%`)
+            } else {
+                query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`)
+            }
         }
 
         if (role && role !== 'all') {
@@ -35,7 +41,13 @@ export async function getUsersAction(params?: {
 
         const { data, error, count } = await query.range(from, to)
 
-        if (error) throw error
+        if (error) {
+            console.error("Supabase query error in getUsersAction:", error);
+            throw error;
+        }
+
+        console.log(`getUsersAction: returning ${data?.length} users for search: "${search}"`);
+
         return {
             success: true,
             users: data || [],
@@ -44,6 +56,7 @@ export async function getUsersAction(params?: {
             totalPages: count ? Math.ceil(count / limit) : 0
         }
     } catch (error: any) {
+        console.error("getUsersAction Caught Error:", error);
         return { success: false, error: error.message }
     }
 }
@@ -66,7 +79,9 @@ export async function updateUserRoleAction(userId: string, newRole: 'user' | 'ad
             return { success: false, error: 'فقط مدير النظام (Super Admin) يمكنه تعيين مدراء' }
         }
 
-        const { error } = await supabase
+        const adminSupabase = getSupabaseAdmin()
+
+        const { error } = await adminSupabase
             .from('profiles')
             .update({ role: newRole })
             .eq('id', userId)
@@ -104,7 +119,9 @@ export async function toggleUserBanAction(userId: string, isBanned: boolean) {
             return { success: false, error: 'لا يمكنك حظر نفسك' }
         }
 
-        const { error } = await supabase
+        const adminSupabase = getSupabaseAdmin()
+
+        const { error } = await adminSupabase
             .from('profiles')
             .update({ is_banned: isBanned })
             .eq('id', userId)

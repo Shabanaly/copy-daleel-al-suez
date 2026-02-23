@@ -4,15 +4,17 @@ import { createClient } from '@/lib/supabase/server'
 import { PlacesManagement } from '@/presentation/features/admin/components/places-management'
 import Link from 'next/link'
 import { ArrowRight, Plus } from 'lucide-react'
+import { requireAdmin } from '@/lib/supabase/auth-utils'
 
 export const dynamic = 'force-dynamic'
 
 export default async function AdminPlacesPage() {
     const supabase = await createClient()
 
-    const [placesResult, categories] = await Promise.all([
+    const [placesResult, categories, { profile }] = await Promise.all([
         getAdminPlacesAction(),
-        getCategoriesUseCase.execute(undefined, supabase)
+        getCategoriesUseCase.execute(undefined, supabase),
+        requireAdmin()
     ])
 
     return (
@@ -40,6 +42,7 @@ export default async function AdminPlacesPage() {
             <PlacesManagement
                 initialPlaces={placesResult.places || []}
                 categories={categories.map(c => ({ id: c.id, name: c.name }))}
+                isSuperAdmin={profile?.role === 'super_admin'}
             />
         </div>
     )
