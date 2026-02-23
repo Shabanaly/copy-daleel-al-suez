@@ -6,7 +6,6 @@ import { StarRating } from '@/presentation/features/places/components/star-ratin
 import { Loader2 } from 'lucide-react'
 
 interface ReviewFormProps {
-    placeId: string
     placeName: string
     existingReview?: {
         rating: number

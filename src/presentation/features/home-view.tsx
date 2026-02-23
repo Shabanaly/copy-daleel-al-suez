@@ -166,8 +166,8 @@ export function HomeView({
 
                     {/* Smart Search Bar */}
                     <div className="max-w-2xl mx-auto w-full mb-6 relative">
-                        <div className="bg-white/10 backdrop-blur-xl p-1.5 rounded-full border border-white/20 shadow-2xl relative z-[60]">
-                            <HeaderSearchBar containerClassName="max-w-none" />
+                        <div className="bg-white/10 dark:bg-black/20 backdrop-blur-xl p-1.5 rounded-full border border-white/20 dark:border-white/10 shadow-2xl relative z-[60]">
+                            <HeaderSearchBar containerClassName="max-w-none" variant="ghost" />
                         </div>
                     </div>
                 </div>
@@ -229,7 +229,7 @@ export function HomeView({
                 </HorizontalScroll>
 
                 {/* Latest Marketplace Ads - The Bridge */}
-                <LatestAdsSection initialItems={marketplaceAds} />
+                <LatestAdsSection initialItems={marketplaceAds} initialSortType="random" />
 
                 <div className="py-2">
                     <HomeNewsSection articles={latestArticles} />
@@ -248,7 +248,7 @@ export function HomeView({
 
                         <div className="flex flex-wrap justify-center gap-3">
                             {heroSuggestions.length > 0 ? (
-                                heroSuggestions.map((suggestion) => (
+                                heroSuggestions.slice(0, 4).map((suggestion) => (
                                     <SuggestionButton
                                         key={suggestion.id}
                                         icon={CATEGORY_ICONS[suggestion.slug] || DefaultIcon}

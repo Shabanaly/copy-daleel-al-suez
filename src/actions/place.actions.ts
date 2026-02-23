@@ -108,7 +108,21 @@ export async function updatePlaceAction(id: string, rawData: any): Promise<Place
             return { message: "المكان غير موجود", success: false }
         }
 
-        // 3. Update
+        // 3. Security Check: Ownership or Admin
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single()
+
+        const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin'
+        const isOwner = existingPlace.createdBy === user.id || existingPlace.ownerId === user.id
+
+        if (!isAdmin && !isOwner) {
+            return { message: "غير مسموح لك بتعديل هذا المكان", success: false }
+        }
+
+        // 4. Update
         const updatedPlace = await placeRepository.updatePlace(id, validatedData as any);
 
         revalidatePath('/')

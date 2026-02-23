@@ -285,14 +285,16 @@ export class SupabaseMarketplaceRepository {
 
         if (eventType === 'view') {
             await supabase.rpc('log_smart_view', {
-                p_item_id: itemId,
+                p_entity_id: itemId,
+                p_entity_type: 'marketplace_item',
                 p_user_id: userId,
                 p_session_id: sessionId,
                 p_ip_address: ipAddress
             });
         } else {
             await supabase.from("engagement_logs").insert({
-                item_id: itemId,
+                entity_id: itemId,
+                entity_type: 'marketplace_item',
                 user_id: userId,
                 session_id: sessionId,
                 ip_address: ipAddress,
@@ -352,10 +354,12 @@ export class SupabaseMarketplaceRepository {
         const supabase = (client as SupabaseClient) || this.supabase;
         if (!supabase) return [];
 
+        const now = new Date().toISOString();
         let query = supabase
             .from('marketplace_items')
             .select(this.listFields)
-            .eq('status', 'active');
+            .eq('status', 'active')
+            .or(`expires_at.is.null,expires_at.gt.${now}`);
 
         if (sortType === 'most_viewed') {
             query = query.order('view_count', { ascending: false }).limit(limit);
@@ -375,6 +379,7 @@ export class SupabaseMarketplaceRepository {
             .from('marketplace_items')
             .select(this.listFields)
             .eq('status', 'active')
+            .or(`expires_at.is.null,expires_at.gt.${now}`)
             .eq('is_featured', true)
             .limit(2);
 
@@ -387,6 +392,7 @@ export class SupabaseMarketplaceRepository {
             .from('marketplace_items')
             .select(this.listFields)
             .eq('status', 'active')
+            .or(`expires_at.is.null,expires_at.gt.${now}`)
             .eq('is_featured', false)
             .order('created_at', { ascending: false })
             .limit(remaining * 3);

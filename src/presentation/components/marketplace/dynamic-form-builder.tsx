@@ -21,12 +21,17 @@ interface DynamicFormBuilderProps {
 export function DynamicFormBuilder({ fields, onChange, initialValues = {} }: DynamicFormBuilderProps) {
     const [values, setValues] = useState<Record<string, any>>(initialValues);
 
+    // Only broadcast changes to parent. We don't want to re-init values if initialValues changes 
+    // unless it's a completely different record (handled by 'key' prop in parent)
     useEffect(() => {
         onChange(values);
-    }, [values, onChange]);
+    }, [values]); // Removed onChange to avoid unnecessary cycles if parent doesn't memoize it
 
     const handleChange = (name: string, value: any) => {
-        setValues(prev => ({ ...prev, [name]: value }));
+        setValues(prev => {
+            if (prev[name] === value) return prev;
+            return { ...prev, [name]: value };
+        });
     };
 
     if (!fields || fields.length === 0) return null;

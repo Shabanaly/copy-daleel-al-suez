@@ -1,7 +1,8 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createReadOnlyClient } from '@/lib/supabase/server'
 import { sanitizeText } from '@/lib/utils/sanitize'
+import { unstable_cache } from 'next/cache'
 
 export interface MarketplaceSearchResult {
     id: string
@@ -36,8 +37,10 @@ export async function searchMarketplace(query: string, areaId?: string): Promise
     const cleanQuery = sanitizeText(query).substring(0, 100) // حد أقصى 100 حرف
     if (!cleanQuery || cleanQuery.length < 2) return []
 
-    const supabase = await createClient()
-    const q = `%${cleanQuery}%`
+    const supabase = await createReadOnlyClient()
+    // Escape % and _ for ILIKE
+    const escapedQuery = cleanQuery.replace(/[%_]/g, '\\$&')
+    const q = `%${escapedQuery}%`
 
     let dbQuery = supabase
         .from('marketplace_items')
@@ -72,7 +75,9 @@ export async function searchMarketplace(query: string, areaId?: string): Promise
     return items.map(item => ({
         id: item.id,
         title: item.title,
-        description: item.description?.substring(0, 60) + '...',
+        description: item.description && item.description.length > 60
+            ? item.description.substring(0, 60) + '...'
+            : (item.description || ''),
         // @ts-ignore
         image: item.images && item.images.length > 0 ? item.images[0] : undefined,
         slug: item.slug || item.id,

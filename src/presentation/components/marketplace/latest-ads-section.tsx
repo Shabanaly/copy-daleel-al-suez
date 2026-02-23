@@ -10,10 +10,10 @@ import { MarketplaceCardSkeleton } from '@/presentation/components/marketplace/m
 import { cn } from '@/lib/utils'
 import { HorizontalScroll } from '@/presentation/components/shared/ui/horizontal-scroll'
 
-export function LatestAdsSection({ initialItems = [] }: { initialItems?: MarketplaceItem[] }) {
+export function LatestAdsSection({ initialItems = [], initialSortType = 'random' }: { initialItems?: MarketplaceItem[], initialSortType?: 'random' | 'most_viewed' | 'lowest_price' }) {
     const [items, setItems] = useState<MarketplaceItem[]>(initialItems)
     const [loading, setLoading] = useState(initialItems.length === 0)
-    const [sortType, setSortType] = useState<'random' | 'most_viewed' | 'lowest_price'>('random')
+    const [sortType, setSortType] = useState<'random' | 'most_viewed' | 'lowest_price'>(initialSortType)
 
     useEffect(() => {
         if (initialItems.length > 0) return;
@@ -25,7 +25,7 @@ export function LatestAdsSection({ initialItems = [] }: { initialItems?: Marketp
 
         const fetchAds = async () => {
             try {
-                const ads = await getHomeAdsAction(8, picked)
+                const ads = await getHomeAdsAction(6, picked)
                 setItems(ads)
             } catch (error) {
                 console.error('Failed to fetch ads:', error)

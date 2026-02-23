@@ -17,11 +17,13 @@ import { useArea } from '@/contexts/area-context'
 export function HeaderSearchBar({
     initialMobileFocus = false,
     onClose,
-    containerClassName
+    containerClassName,
+    variant = 'default'
 }: {
     initialMobileFocus?: boolean;
     onClose?: () => void;
     containerClassName?: string;
+    variant?: 'default' | 'ghost';
 }) {
     const router = useRouter()
     const containerRef = useRef<HTMLDivElement>(null)
@@ -257,10 +259,10 @@ export function HeaderSearchBar({
     return (
         <div ref={containerRef} className={cn("relative w-full max-w-lg mx-auto", containerClassName)}>
             <form onSubmit={handleSearchSubmit} className={cn(
-                "w-full max-w-full box-border relative flex items-center bg-muted/50 border border-border/60 rounded-full transition-all duration-300",
-                showAreaMenu ? "z-[120]" : "z-[60]",
-                "focus-within:bg-background focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10",
-                "hover:bg-muted/80 hover:border-primary/30"
+                "w-full max-w-full box-border relative flex items-center transition-all duration-300 rounded-full",
+                variant === 'default' && "bg-muted/50 border border-border/60 focus-within:bg-background focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10 hover:bg-muted/80 hover:border-primary/30",
+                variant === 'ghost' && "bg-transparent border-none focus-within:bg-transparent",
+                showAreaMenu ? "z-[120]" : "z-[60]"
             )}>
 
                 {/* Back Button (Mobile Only) */}
@@ -282,7 +284,10 @@ export function HeaderSearchBar({
                     <button
                         type="button"
                         onClick={() => setShowAreaMenu(!showAreaMenu)}
-                        className="flex items-center gap-1 px-1.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                        className={cn(
+                            "flex items-center gap-1 px-1.5 py-1.5 text-xs font-medium transition-colors",
+                            variant === 'ghost' ? "text-white/80 hover:text-white" : "text-muted-foreground hover:text-foreground"
+                        )}
                     >
                         {/* Only render content after mount to avoid hydration mismatch with local storage */}
                         {mounted ? (
@@ -362,7 +367,10 @@ export function HeaderSearchBar({
                         fetchHistory()
                     }}
                     placeholder={placeholder}
-                    className="flex-1 min-w-0 bg-transparent border-none outline-none text-xs md:text-sm ps-2.5 pe-1 py-2 placeholder:text-muted-foreground/70"
+                    className={cn(
+                        "flex-1 min-w-0 bg-transparent border-none outline-none text-xs md:text-sm ps-2.5 pe-1 py-2",
+                        variant === 'ghost' ? "placeholder:text-white/60 text-white" : "placeholder:text-muted-foreground/70 text-foreground"
+                    )}
                 />
 
                 {/* Actions */}
@@ -387,7 +395,9 @@ export function HeaderSearchBar({
                             "p-1.5 rounded-full transition-colors",
                             query
                                 ? "bg-primary text-primary-foreground shadow-sm"
-                                : "bg-transparent text-muted-foreground hover:bg-muted"
+                                : variant === 'ghost'
+                                    ? "bg-transparent text-white/70 hover:bg-white/10"
+                                    : "bg-transparent text-muted-foreground hover:bg-muted"
                         )}
                     >
                         <Search size={18} />

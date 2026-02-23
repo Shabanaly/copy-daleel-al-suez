@@ -11,6 +11,11 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'engagement_logs' AND COLUMN_NAME = 'ip_address') THEN
         ALTER TABLE engagement_logs ADD COLUMN ip_address text;
     END IF;
+
+    -- Rename item_id to entity_id if it exists (normalization)
+    IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'engagement_logs' AND COLUMN_NAME = 'item_id') THEN
+        ALTER TABLE engagement_logs RENAME COLUMN item_id TO entity_id;
+    END IF;
 END $$;
 
 -- 2. Create more efficient index for de-duplication checks

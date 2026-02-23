@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient, createReadOnlyClient } from '@/lib/supabase/server'
+import { sanitizeText } from '@/lib/utils/sanitize'
 import { SupabaseCommunityRepository } from '@/data/repositories/supabase-community.repository'
 import { CommunityCategory, CommunityQuestion } from '@/domain/entities/community-qa'
 import { createNotificationAction } from './notifications.actions'
@@ -59,7 +60,11 @@ export async function submitQuestionAction(data: {
 
     const repository = new SupabaseCommunityRepository(supabase)
     try {
-        const question = await repository.createQuestion(data, user.id)
+        const content = sanitizeText(data.content)
+        if (content.length < 10) throw new Error('السؤال قصير جداً، يجب أن يكون 10 أحرف على الأقل')
+        if (content.length > 2000) throw new Error('السؤال طويل جداً، الحد الأقصى 2000 حرف')
+
+        const question = await repository.createQuestion({ ...data, content }, user.id)
         revalidatePath('/community')
         return { success: true, question }
     } catch (error) {
@@ -70,18 +75,20 @@ export async function submitQuestionAction(data: {
 
 // --- Cached Data Wrappers ---
 
-export const getCachedQuestions = unstable_cache(
-    async (filters?: {
-        search?: string;
-        sortBy?: 'newest' | 'votes' | 'unanswered';
-    }) => {
-        const supabase = await createReadOnlyClient()
-        const repository = new SupabaseCommunityRepository(supabase)
-        return await repository.getQuestions(filters)
-    },
-    ['community-questions'],
-    { revalidate: 60, tags: ['community', 'community_questions'] }
-)
+export const getCachedQuestions = async (filters?: {
+    search?: string;
+    sortBy?: 'newest' | 'votes' | 'unanswered';
+}) => {
+    return await unstable_cache(
+        async () => {
+            const supabase = await createReadOnlyClient()
+            const repository = new SupabaseCommunityRepository(supabase)
+            return await repository.getQuestions(filters)
+        },
+        ['community-questions', JSON.stringify(filters || {})],
+        { revalidate: 60, tags: ['community', 'community_questions'] }
+    )()
+}
 
 export async function submitAnswerAction(questionId: string, body: string) {
     const supabase = await createClient()
@@ -91,7 +98,11 @@ export async function submitAnswerAction(questionId: string, body: string) {
 
     const repository = new SupabaseCommunityRepository(supabase)
     try {
-        const answer = await repository.createAnswer(questionId, body, user.id)
+        const content = sanitizeText(body)
+        if (content.length < 5) throw new Error('الإجابة قصيرة جداً، يجب أن تكون 5 أحرف على الأقل')
+        if (content.length > 5000) throw new Error('الإجابة طويلة جداً، الحد الأقصى 5000 حرف')
+
+        const answer = await repository.createAnswer(questionId, content, user.id)
 
         // Notify question owner
         const question = await repository.getQuestionById(questionId)

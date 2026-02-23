@@ -1,6 +1,52 @@
-import { Mail, Phone, MapPin } from 'lucide-react'
+'use client'
+
+import { Mail, Phone, MapPin, Loader2, Send } from 'lucide-react'
+import { useState } from 'react'
+import { notifyAdminsAction } from '@/actions/notifications.actions'
+import { toast } from 'sonner'
 
 export function ContactView() {
+    const [loading, setLoading] = useState(false)
+    const [formData, setFormData] = useState({
+        name: '',
+        email: '',
+        message: ''
+    })
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+
+        if (!formData.name || !formData.email || !formData.message) {
+            toast.error('يرجى ملء جميع الحقول')
+            return
+        }
+
+        setLoading(true)
+        try {
+            const result = await notifyAdminsAction({
+                title: 'رسالة تواصل جديدة ✉️',
+                message: `وصلت رسالة جديدة من ${formData.name} (${formData.email})`,
+                type: 'contact_message',
+                data: {
+                    ...formData,
+                    url: '/content-admin/notifications'
+                }
+            })
+
+            if (result.success) {
+                toast.success('تم إرسال رسالتك بنجاح، سنقوم بالرد عليك في أقرب وقت')
+                setFormData({ name: '', email: '', message: '' })
+            } else {
+                throw new Error(result.error || 'فشل الإرسال')
+            }
+        } catch (error) {
+            console.error('Contact Form Error:', error)
+            toast.error('حدث خطأ أثناء إرسال الرسالة، يرجى المحاولة لاحقاً')
+        } finally {
+            setLoading(false)
+        }
+    }
+
     return (
         <div className="container mx-auto px-4 py-12 max-w-4xl">
             <h1 className="text-3xl font-bold text-foreground mb-8 border-b border-border pb-4">تواصل معنا</h1>
@@ -46,21 +92,43 @@ export function ContactView() {
 
                 <div className="bg-card p-6 rounded-2xl shadow-sm border border-border">
                     <h3 className="text-xl font-bold text-foreground mb-6">أرسل لنا رسالة</h3>
-                    <form className="space-y-4">
+                    <form onSubmit={handleSubmit} className="space-y-4">
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-1">الاسم</label>
-                            <input type="text" className="w-full px-4 py-2 rounded-xl border border-border bg-background focus:ring-2 focus:ring-primary/20 outline-none text-foreground" />
+                            <input
+                                type="text"
+                                required
+                                value={formData.name}
+                                onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                className="w-full px-4 py-2 rounded-xl border border-border bg-background focus:ring-2 focus:ring-primary/20 outline-none text-foreground"
+                            />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-1">البريد الإلكتروني</label>
-                            <input type="email" className="w-full px-4 py-2 rounded-xl border border-border bg-background focus:ring-2 focus:ring-primary/20 outline-none text-foreground" />
+                            <input
+                                type="email"
+                                required
+                                value={formData.email}
+                                onChange={e => setFormData({ ...formData, email: e.target.value })}
+                                className="w-full px-4 py-2 rounded-xl border border-border bg-background focus:ring-2 focus:ring-primary/20 outline-none text-foreground"
+                            />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-foreground mb-1">الرسالة</label>
-                            <textarea rows={4} className="w-full px-4 py-2 rounded-xl border border-border bg-background focus:ring-2 focus:ring-primary/20 outline-none text-foreground"></textarea>
+                            <textarea
+                                rows={4}
+                                required
+                                value={formData.message}
+                                onChange={e => setFormData({ ...formData, message: e.target.value })}
+                                className="w-full px-4 py-2 rounded-xl border border-border bg-background focus:ring-2 focus:ring-primary/20 outline-none text-foreground"
+                            ></textarea>
                         </div>
-                        <button type="button" className="w-full py-2 bg-primary text-primary-foreground rounded-xl font-medium hover:brightness-110 transition-colors">
-                            إرسال
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-medium hover:brightness-110 transition-colors flex items-center justify-center gap-2 disabled:opacity-70"
+                        >
+                            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><span>إرسال</span> <Send size={18} /></>}
                         </button>
                     </form>
                 </div>

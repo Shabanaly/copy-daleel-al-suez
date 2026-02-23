@@ -1,18 +1,14 @@
 import { HomeView } from "@/presentation/features/home-view";
-import {
-  getCategoriesUseCase,
-  getActiveEventsUseCase,
-  getLatestArticlesUseCase
-} from "@/di/modules";
 import { createReadOnlyClient } from "@/lib/supabase/server";
 import { getWeatherData } from "@/actions/weather.actions";
 import { getPrayerTimes } from "@/actions/prayer.actions";
 import { getDynamicHeroSuggestions } from "@/actions/category.actions";
-import { getActiveCityPulseItems } from "@/actions/city-pulse.actions";
-import { getQuestionsAction } from "@/actions/community.actions";
+import { getCachedQuestions } from "@/actions/community.actions";
 import {
   getCachedHomepageData,
-  getCachedActiveEventsAction
+  getCachedActiveEventsAction,
+  getCachedCategoriesAction,
+  getCachedLatestArticlesAction
 } from "@/app/actions/get-categories-with-places";
 import { getCachedHomeAds } from "@/actions/marketplace.actions";
 import { getCachedActiveCityPulseItems } from "@/actions/city-pulse.actions";
@@ -20,7 +16,6 @@ import { getCachedActiveCityPulseItems } from "@/actions/city-pulse.actions";
 export const revalidate = 3600; // Revalidate every hour
 
 export default async function Home() {
-  const supabase = await createReadOnlyClient()
 
   // 1. Fetch consolidated place data (Featured, Trending, Latest, Top Rated) in 1 request
   const homepagePlaces = await getCachedHomepageData();
@@ -36,14 +31,14 @@ export default async function Home() {
     pulseItems,
     communityQuestions,
   ] = await Promise.all([
-    getCategoriesUseCase.execute(undefined, supabase),
+    getCachedCategoriesAction(),
     getCachedActiveEventsAction(),
-    getLatestArticlesUseCase.execute(3, supabase),
+    getCachedLatestArticlesAction(3),
     getWeatherData(),
     getPrayerTimes(),
     getDynamicHeroSuggestions(),
     getCachedActiveCityPulseItems(),
-    getQuestionsAction({ sortBy: 'newest' }).then(qs => qs.slice(0, 3)),
+    getCachedQuestions({ sortBy: 'newest' }).then(qs => qs.slice(0, 3)),
   ])
 
   // 3. Fetch Marketplace ads (separate or part of consolidated)

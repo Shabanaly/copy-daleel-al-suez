@@ -5,8 +5,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from "@/presentation/ui/button"
 import { Input } from "@/presentation/ui/input"
 import { Textarea } from "@/presentation/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/presentation/ui/select"
-import { CommunityCategory } from "@/domain/entities/community-qa"
 import { submitQuestionAction } from "@/actions/community.actions"
 import { toast } from "sonner"
 import { Loader2, Send, HelpCircle } from "lucide-react"
@@ -18,28 +16,31 @@ interface AskQuestionModalProps {
 
 export function AskQuestionModal({ isOpen, onClose }: AskQuestionModalProps) {
     const [loading, setLoading] = useState(false)
-    const [title, setTitle] = useState("")
-    const [body, setBody] = useState("")
-    const [category, setCategory] = useState<CommunityCategory>("general")
-    const [tags, setTags] = useState("")
+    const [content, setContent] = useState("")
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (!title.trim()) {
+        const trimmedContent = content.trim()
+        if (!trimmedContent) {
             toast.error("يرجى كتابة سؤالك")
+            return
+        }
+
+        if (trimmedContent.length < 10) {
+            toast.error("السؤال قصير جداً، يجب أن يكون 10 أحرف على الأقل")
             return
         }
 
         setLoading(true)
         try {
             const result = await submitQuestionAction({
-                content: title.trim()
+                content: trimmedContent
             })
 
             if (result.success) {
                 toast.success("تم نشر سؤالك بنجاح")
                 onClose()
-                setTitle("")
+                setContent("")
             }
         } catch (error) {
             toast.error(error instanceof Error ? error.message : "فشل نشر السؤال")
@@ -67,8 +68,8 @@ export function AskQuestionModal({ isOpen, onClose }: AskQuestionModalProps) {
                         <Textarea
                             placeholder="اكتب سؤالك هنا... مثلاً: أفضل محل حلويات في السويس؟"
                             rows={4}
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
+                            value={content}
+                            onChange={(e) => setContent(e.target.value)}
                             className="rounded-2xl border-border/50 bg-muted/30 focus-visible:ring-primary resize-none text-base p-4"
                         />
                         <p className="text-[10px] text-muted-foreground px-1">سيتم الرد عليك من قبل أعضاء المجتمع قريباً.</p>

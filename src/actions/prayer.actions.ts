@@ -83,8 +83,9 @@ export async function getPrayerTimes(): Promise<PrayerTimes | null> {
             }
         }
     } catch (error) {
-        console.error('Error fetching prayer times:', error)
-        // Return mock data as fallback
+        console.error('Prayer API Error:', error instanceof Error ? error.message : String(error))
+
+        // Return static fallback data to ensure build/render doesn't fail
         return {
             fajr: '04:30',
             sunrise: '06:00',
@@ -93,9 +94,9 @@ export async function getPrayerTimes(): Promise<PrayerTimes | null> {
             maghrib: '18:00',
             isha: '19:30',
             nextPrayer: {
-                name: 'العصر',
-                time: '15:30',
-                remainingMinutes: 180
+                name: 'الفجر',
+                time: '04:30',
+                remainingMinutes: 60
             }
         }
     }

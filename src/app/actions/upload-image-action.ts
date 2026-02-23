@@ -7,6 +7,12 @@ import { v4 as uuidv4 } from 'uuid'
 export async function uploadImageAction(formData: FormData, bucketName: string = 'places', folderPath: string = 'uploads') {
     try {
         const supabase = await createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+
+        if (!user) {
+            return { success: false, error: 'يجب تسجيل الدخول لرفع الصور' }
+        }
+
         const files = formData.getAll('files') as File[]
 
         if (!files || files.length === 0) {

@@ -4,7 +4,7 @@ import { createReadOnlyClient } from '@/lib/supabase/server'
 import { Category } from '@/domain/entities/category'
 import { Place } from '@/domain/entities/place'
 import { unstable_cache } from 'next/cache'
-import { placeRepository } from '@/di/modules'
+import { placeRepository, getCategoriesUseCase, getLatestArticlesUseCase } from '@/di/modules'
 
 export interface CategoryWithPlaces extends Category {
     places: Place[]
@@ -149,28 +149,54 @@ export const getCachedTopRatedPlaces = unstable_cache(
     { revalidate: 3600, tags: ['places'] }
 );
 
-export const getCachedHomepageData = unstable_cache(
-    async () => {
-        const supabase = await createReadOnlyClient();
-        return await placeRepository.getHomepageData(supabase);
-    },
-    ['homepage-consolidated-data'],
-    { revalidate: 3600, tags: ['places', 'user_events'] }
-);
+export const getCachedHomepageData = async () => {
+    return await unstable_cache(
+        async () => {
+            const supabase = await createReadOnlyClient();
+            return await placeRepository.getHomepageData(supabase);
+        },
+        ['homepage-consolidated-data'],
+        { revalidate: 3600, tags: ['places', 'user_events'] }
+    )();
+};
 
-export const getCachedActiveEventsAction = unstable_cache(
-    async (limit: number = 10) => {
-        const supabase = await createReadOnlyClient();
-        const { eventRepository } = await import('@/di/modules');
-        return await eventRepository.getEvents({ status: 'active', limit }, supabase);
-    },
-    ['active-events-home'],
-    { revalidate: 3600, tags: ['events'] }
-);
+export const getCachedActiveEventsAction = async (limit: number = 10) => {
+    return await unstable_cache(
+        async (limit: number = 10) => {
+            const supabase = await createReadOnlyClient();
+            const { eventRepository } = await import('@/di/modules');
+            return await eventRepository.getEvents({ status: 'active', limit }, supabase);
+        },
+        ['active-events-home'],
+        { revalidate: 3600, tags: ['events'] }
+    )(limit);
+};
 
 export async function getCategoriesWithPlacesAction(offset: number, limit: number) {
     if (offset === 0) {
         return getCachedCategoriesWithPlaces(offset, limit)
     }
     return fetchCategoriesWithPlacesFromDB(offset, limit)
+}
+
+export const getCachedCategoriesAction = async () => {
+    return await unstable_cache(
+        async () => {
+            const supabase = await createReadOnlyClient();
+            return await getCategoriesUseCase.execute(undefined, supabase);
+        },
+        ['homepage-categories'],
+        { revalidate: 3600, tags: ['categories'] }
+    )();
+};
+
+export const getCachedLatestArticlesAction = async (limit: number = 3) => {
+    return await unstable_cache(
+        async () => {
+            const supabase = await createReadOnlyClient();
+            return await getLatestArticlesUseCase.execute(limit, supabase);
+        },
+        ['homepage-latest-articles', limit.toString()],
+        { revalidate: 3600, tags: ['articles'] }
+    )();
 }

@@ -1,6 +1,7 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createReadOnlyClient } from '@/lib/supabase/server'
+import { unstable_cache } from 'next/cache'
 import { MarketplaceItem } from '@/domain/entities/marketplace-item'
 import { MARKETPLACE_FORMS } from '@/config/marketplace-forms'
 import { SupabaseAreaRepository } from '@/data/repositories/supabase-area.repository'
@@ -38,23 +39,29 @@ function mapToEntity(row: any): MarketplaceItem {
 
 // 1. Discover Section (Trending + Featured shuffle)
 export async function getDiscoverItems(): Promise<MarketplaceItem[]> {
-    const supabase = await createClient()
+    return unstable_cache(
+        async () => {
+            const supabase = await createReadOnlyClient()
 
-    // Mix of featured and high-view items
-    const { data: items } = await supabase
-        .from('marketplace_items')
-        .select(LISTING_FIELDS)
-        .eq('status', 'active')
-        .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
-        .order('is_featured', { ascending: false }) // Featured first
-        .limit(20)
+            // Mix of featured and high-view items
+            const { data: items } = await supabase
+                .from('marketplace_items')
+                .select(LISTING_FIELDS)
+                .eq('status', 'active')
+                .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
+                .order('is_featured', { ascending: false }) // Featured first
+                .limit(20)
 
-    if (!items) return []
+            if (!items) return []
 
-    // Random shuffle for "Discovery" feel
-    const mappedItems = items.map(mapToEntity)
-    const shuffled = mappedItems.sort(() => Math.random() - 0.5)
-    return shuffled.slice(0, 8)
+            // Random shuffle for "Discovery" feel
+            const mappedItems = items.map(mapToEntity)
+            const shuffled = mappedItems.sort(() => Math.random() - 0.5)
+            return shuffled.slice(0, 8)
+        },
+        ['marketplace-discover-items'],
+        { revalidate: 3600, tags: ['marketplace'] }
+    )()
 }
 
 // 2. Continue Browsing (Recently User Viewed)
@@ -99,16 +106,15 @@ export async function getRecentlyViewedItems(): Promise<MarketplaceItem[]> {
     return sortedItems
 }
 
-// 3. Popular Nearby (Currently widespread if no area provided)
-export async function getPopularNearbyItems(areaId?: string): Promise<MarketplaceItem[]> {
-    const supabase = await createClient()
+async function fetchPopularNearbyItemsFromDB(areaId?: string): Promise<MarketplaceItem[]> {
+    const supabase = await createReadOnlyClient()
 
     let query = supabase
         .from('marketplace_items')
         .select(LISTING_FIELDS)
         .eq('status', 'active')
         .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
-        // Approximating "Popular" by view count if available
+        // Approximating "Popular" by created_at (latest) as fallback
         .order('created_at', { ascending: false })
         .limit(10)
 
@@ -120,86 +126,107 @@ export async function getPopularNearbyItems(areaId?: string): Promise<Marketplac
     return (items || []).map(mapToEntity)
 }
 
+// 3. Popular Nearby (Currently widespread if no area provided)
+export async function getPopularNearbyItems(areaId?: string): Promise<MarketplaceItem[]> {
+    return unstable_cache(
+        async () => fetchPopularNearbyItemsFromDB(areaId),
+        ['marketplace-popular-nearby', areaId || 'none'],
+        { revalidate: 3600, tags: ['marketplace'] }
+    )()
+}
+
 // 3.5 Optimized Nearby (Proximity Fallback)
 export async function getNearbyItemsOptimized(areaId?: string): Promise<MarketplaceItem[]> {
-    const supabase = await createClient()
-    const limit = 8
+    return unstable_cache(
+        async () => {
+            const supabase = await createReadOnlyClient()
+            const limit = 8
 
-    if (!areaId) {
-        return getPopularNearbyItems()
-    }
+            if (!areaId) {
+                return fetchPopularNearbyItemsFromDB()
+            }
 
-    try {
-        // 1. Fetch items from the exact area first
-        const { data: exactMatchItems, error: exactError } = await supabase
-            .from('marketplace_items')
-            .select(LISTING_FIELDS)
-            .eq('status', 'active')
-            .eq('area_id', areaId)
-            .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
-            .order('created_at', { ascending: false })
-            .limit(limit)
+            try {
+                // 1. Fetch items from the exact area first
+                const { data: exactMatchItems, error: exactError } = await supabase
+                    .from('marketplace_items')
+                    .select(LISTING_FIELDS)
+                    .eq('status', 'active')
+                    .eq('area_id', areaId)
+                    .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
+                    .order('created_at', { ascending: false })
+                    .limit(limit)
 
-        if (exactError) throw exactError
+                if (exactError) throw exactError
 
-        const results = (exactMatchItems || []).map(mapToEntity)
+                const results = (exactMatchItems || []).map(mapToEntity)
 
-        // 2. If we have enough, return them
-        if (results.length >= limit) {
-            return results
-        }
+                // 2. If we have enough, return them
+                if (results.length >= limit) {
+                    return results
+                }
 
-        // 3. Otherwise, find items in the same district
-        const areaRepo = new SupabaseAreaRepository(supabase)
-        const allAreas = await areaRepo.getAreas()
-        const targetArea = allAreas.find(a => a.id === areaId)
+                // 3. Otherwise, find items in the same district
+                const areaRepo = new SupabaseAreaRepository(supabase)
+                const allAreas = await areaRepo.getAreas()
+                const targetArea = allAreas.find(a => a.id === areaId)
 
-        if (!targetArea || !targetArea.districtId) return results
+                if (!targetArea || !targetArea.districtId) return results
 
-        // Find other areas in the same district
-        const siblingAreaIds = allAreas
-            .filter(a => a.districtId === targetArea.districtId && a.id !== areaId)
-            .map(a => a.id)
+                // Find other areas in the same district
+                const siblingAreaIds = allAreas
+                    .filter(a => a.districtId === targetArea.districtId && a.id !== areaId)
+                    .map(a => a.id)
 
-        if (siblingAreaIds.length === 0) return results
+                if (siblingAreaIds.length === 0) return results
 
-        const { data: neighborItems, error: neighborError } = await supabase
-            .from('marketplace_items')
-            .select(LISTING_FIELDS)
-            .eq('status', 'active')
-            .in('area_id', siblingAreaIds)
-            .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
-            .order('created_at', { ascending: false })
-            .limit(limit - results.length)
+                const { data: neighborItems, error: neighborError } = await supabase
+                    .from('marketplace_items')
+                    .select(LISTING_FIELDS)
+                    .eq('status', 'active')
+                    .in('area_id', siblingAreaIds)
+                    .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
+                    .order('created_at', { ascending: false })
+                    .limit(limit - results.length)
 
-        if (neighborError) {
-            console.error('Proximity fetch error:', neighborError)
-            return results
-        }
+                if (neighborError) {
+                    console.error('Proximity fetch error:', neighborError)
+                    return results
+                }
 
-        // Combine and return
-        const finalResults = [...results, ...(neighborItems || []).map(mapToEntity)]
-        return finalResults
+                // Combine and return
+                const finalResults = [...results, ...(neighborItems || []).map(mapToEntity)]
+                return finalResults
 
-    } catch (error) {
-        console.error('getNearbyItemsOptimized failed:', error)
-        return getPopularNearbyItems(areaId) // Fallback to basic
-    }
+            } catch (error) {
+                console.error('getNearbyItemsOptimized failed:', error)
+                return getPopularNearbyItems(areaId) // Fallback to basic
+            }
+        },
+        ['marketplace-nearby-optimized', areaId || 'none'],
+        { revalidate: 3600, tags: ['marketplace'] }
+    )()
 }
 
 // 4. Fresh & New
 export async function getFreshItems(): Promise<MarketplaceItem[]> {
-    const supabase = await createClient()
+    return unstable_cache(
+        async () => {
+            const supabase = await createReadOnlyClient()
 
-    const { data: items } = await supabase
-        .from('marketplace_items')
-        .select(LISTING_FIELDS)
-        .eq('status', 'active')
-        .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
-        .order('created_at', { ascending: false })
-        .limit(8)
+            const { data: items } = await supabase
+                .from('marketplace_items')
+                .select(LISTING_FIELDS)
+                .eq('status', 'active')
+                .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
+                .order('created_at', { ascending: false })
+                .limit(8)
 
-    return (items || []).map(mapToEntity)
+            return (items || []).map(mapToEntity)
+        },
+        ['marketplace-fresh-items'],
+        { revalidate: 3600, tags: ['marketplace'] }
+    )()
 }
 
 // 5. Guest Recommendations (Based on client-provided IDs)
@@ -241,94 +268,115 @@ export async function getGuestRecommendations(
 
 // 6. Good As New (Condition: new or like_new)
 export async function getGoodAsNewItems(): Promise<MarketplaceItem[]> {
-    const supabase = await createClient()
+    return unstable_cache(
+        async () => {
+            const supabase = await createReadOnlyClient()
 
-    // Fetch items with 'new' or 'like_new' condition
-    // We can't easily do "random" efficiently without RPC, so we'll fetch latest.
-    // Or we can fetch a slightly larger batch and shuffle in-memory if needed, 
-    // but for now, "latest good condition" is a solid value proposition.
-    const { data: items, error } = await supabase
-        .from('marketplace_items')
-        .select(LISTING_FIELDS)
-        .eq('status', 'active')
-        .in('condition', ['new', 'like_new'])
-        .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
-        .order('created_at', { ascending: false })
-        .limit(10)
+            // Fetch items with 'new' or 'like_new' condition
+            const { data: items, error } = await supabase
+                .from('marketplace_items')
+                .select(LISTING_FIELDS)
+                .eq('status', 'active')
+                .in('condition', ['new', 'like_new'])
+                .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
+                .order('created_at', { ascending: false })
+                .limit(10)
 
-    if (error) console.error('Good As New Error:', error)
+            if (error) console.error('Good As New Error:', error)
 
-    return (items || []).map(mapToEntity)
+            return (items || []).map(mapToEntity)
+        },
+        ['marketplace-good-as-new'],
+        { revalidate: 3600, tags: ['marketplace'] }
+    )()
 }
 
 // 7. Hourly Spotlight (Random Category)
 export async function getHourlySpotlight(): Promise<{ title: string, items: MarketplaceItem[], link: string, icon: string } | null> {
-    const supabase = await createClient()
-    const categories = Object.values(MARKETPLACE_FORMS)
+    return unstable_cache(
+        async () => {
+            const supabase = await createReadOnlyClient()
+            const categories = Object.values(MARKETPLACE_FORMS)
 
-    // Try up to 5 times to find a category with items
-    for (let i = 0; i < 5; i++) {
-        const randomCategory = categories[Math.floor(Math.random() * categories.length)]
+            // Try up to 5 times to find a category with items
+            for (let i = 0; i < 5; i++) {
+                const randomCategory = categories[Math.floor(Math.random() * categories.length)]
 
-        const { data: items, error } = await supabase
-            .from('marketplace_items')
-            .select(LISTING_FIELDS)
-            .eq('status', 'active')
-            .eq('category', randomCategory.id)
-            .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
-            .limit(8)
+                const { data: items, error } = await supabase
+                    .from('marketplace_items')
+                    .select(LISTING_FIELDS)
+                    .eq('status', 'active')
+                    .eq('category', randomCategory.id)
+                    .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
+                    .limit(8)
 
-        if (error) console.error('Spotlight Error:', error)
+                if (error) console.error('Spotlight Error:', error)
 
-        if (items && items.length > 0) {
-            return {
-                title: randomCategory.label,
-                items: items.map(mapToEntity),
-                link: `/marketplace/browse?category=${randomCategory.id}`,
-                icon: randomCategory.icon
+                if (items && items.length > 0) {
+                    return {
+                        title: randomCategory.label,
+                        items: items.map(mapToEntity),
+                        link: `/marketplace/browse?category=${randomCategory.id}`,
+                        icon: randomCategory.icon
+                    }
+                }
             }
-        }
-    }
 
-    return null
+            return null
+        },
+        ['marketplace-hourly-spotlight', new Date().getHours().toString()], // Refresh every hour
+        { revalidate: 3600, tags: ['marketplace'] }
+    )()
 }
 
 // 8. Items by Category (for Client-side Smart Section)
 export async function getItemsByCategory(categoryId: string): Promise<MarketplaceItem[]> {
-    const supabase = await createClient()
+    return unstable_cache(
+        async () => {
+            const supabase = await createReadOnlyClient()
 
-    const { data: items, error } = await supabase
-        .from('marketplace_items')
-        .select(LISTING_FIELDS)
-        .eq('status', 'active')
-        .eq('category', categoryId)
-        .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
-        .order('created_at', { ascending: false })
-        .limit(8)
+            const { data: items, error } = await supabase
+                .from('marketplace_items')
+                .select(LISTING_FIELDS)
+                .eq('status', 'active')
+                .eq('category', categoryId)
+                .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
+                .order('created_at', { ascending: false })
+                .limit(8)
 
-    if (error) console.error('Smart Category Error:', error)
+            if (error) console.error('Smart Category Error:', error)
 
-    return (items || []).map(mapToEntity)
+            return (items || []).map(mapToEntity)
+        },
+        ['marketplace-items-by-category', categoryId],
+        { revalidate: 3600, tags: ['marketplace'] }
+    )()
 }
 
 // 9. Related Type Items (See Also - Personalized)
 export async function getRelatedTypeItems(categoryId: string, typeKey: string, typeValue: any): Promise<MarketplaceItem[]> {
-    const supabase = await createClient()
+    return unstable_cache(
+        async () => {
+            const supabase = await createReadOnlyClient()
 
-    // Construct JSONB filter
-    // attributes->>typeKey = typeValue
-    const { data: items, error } = await supabase
-        .from('marketplace_items')
-        .select(LISTING_FIELDS)
-        .eq('status', 'active')
-        .eq('category', categoryId)
-        // items with this specific attribute value
-        .contains('attributes', { [typeKey]: typeValue })
-        .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
-        .order('created_at', { ascending: false })
-        .limit(8)
+            // Construct JSONB filter
+            // attributes->>typeKey = typeValue
+            const { data: items, error } = await supabase
+                .from('marketplace_items')
+                .select(LISTING_FIELDS)
+                .eq('status', 'active')
+                .eq('category', categoryId)
+                // items with this specific attribute value
+                .contains('attributes', { [typeKey]: typeValue })
+                .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
+                .order('created_at', { ascending: false })
+                .limit(8)
 
-    if (error) console.error('Related Type Error:', error)
+            if (error) console.error('Related Type Error:', error)
 
-    return (items || []).map(mapToEntity)
+            return (items || []).map(mapToEntity)
+        },
+        ['marketplace-related-type-items', categoryId, typeKey, JSON.stringify(typeValue)],
+        { revalidate: 3600, tags: ['marketplace'] }
+    )()
 }

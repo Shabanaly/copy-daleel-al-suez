@@ -77,5 +77,6 @@ export function sanitizeImageUrls(urls: any[]): string[] {
     if (!Array.isArray(urls)) return [];
     return urls
         .filter(url => typeof url === 'string' && url.trim().length > 0)
+        .filter(url => isValidImageUrl(url)) // التحقق من أن الرابط من Supabase أو نسبي
         .slice(0, 10); // حد أقصى 10 صور
 }

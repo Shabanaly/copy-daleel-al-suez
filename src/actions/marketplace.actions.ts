@@ -291,15 +291,18 @@ export const getSellerItemsAction = reactCache(async (sellerId: string) => {
 
 // --- Cached Data Wrappers ---
 
-export const getCachedMarketplaceItems = unstable_cache(
-    async (filters?: any, limit: number = 20, offset: number = 0) => {
-        const supabase = await createReadOnlyClient()
-        const repository = new SupabaseMarketplaceRepository(supabase)
-        return await repository.getItems(filters, limit, offset)
-    },
-    ['marketplace-items'],
-    { revalidate: 3600, tags: ['marketplace'] }
-)
+export const getCachedMarketplaceItems = async (filters?: any, limit: number = 20, offset: number = 0) => {
+    const cacheKey = ['marketplace-items', JSON.stringify(filters || {}), limit.toString(), offset.toString()];
+    return await unstable_cache(
+        async () => {
+            const supabase = await createReadOnlyClient()
+            const repository = new SupabaseMarketplaceRepository(supabase)
+            return await repository.getItems(filters, limit, offset)
+        },
+        cacheKey,
+        { revalidate: 3600, tags: ['marketplace'] }
+    )();
+}
 
 export const getCachedMarketplaceItem = reactCache(async (slugOrId: string) => {
     const supabase = await createReadOnlyClient()
@@ -307,12 +310,14 @@ export const getCachedMarketplaceItem = reactCache(async (slugOrId: string) => {
     return await repository.getItemBySlug(slugOrId)
 })
 
-export const getCachedHomeAds = unstable_cache(
-    async (limit: number = 6, sortType: 'random' | 'most_viewed' | 'lowest_price' = 'random') => {
-        const supabase = await createReadOnlyClient()
-        const repository = new SupabaseMarketplaceRepository(supabase)
-        return await repository.getHomeAds(limit, sortType)
-    },
-    ['marketplace-home-ads'],
-    { revalidate: 3600, tags: ['marketplace', 'homepage'] }
-)
+export const getCachedHomeAds = async (limit: number = 6, sortType: 'random' | 'most_viewed' | 'lowest_price' = 'random') => {
+    return await unstable_cache(
+        async () => {
+            const supabase = await createReadOnlyClient()
+            const repository = new SupabaseMarketplaceRepository(supabase)
+            return await repository.getHomeAds(limit, sortType)
+        },
+        ['marketplace-home-ads', limit.toString(), sortType],
+        { revalidate: 3600, tags: ['marketplace', 'homepage'] }
+    )()
+}

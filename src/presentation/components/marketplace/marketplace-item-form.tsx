@@ -98,6 +98,13 @@ export function MarketplaceItemForm({ initialData, categoryConfig, onSuccess }: 
             newErrors[baseConfig.typeSelector.name] = `يرجى اختيار ${baseConfig.typeSelector.label}`;
         }
 
+        // Total images check (existing + new)
+        const totalImages = images.length + existingImages.length;
+        if (totalImages > 10) {
+            toast.error('الحد الأقصى للصور هو 10 صور فقط (شاملة الصور الحالية)');
+            return false;
+        }
+
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -174,7 +181,9 @@ export function MarketplaceItemForm({ initialData, categoryConfig, onSuccess }: 
 
         } catch (error: any) {
             console.error('Error saving item:', error);
-            toast.error(`حدث خطأ أثناء حفظ البيانات: ${error.message || 'خطأ غير معروف'}`);
+            // Don't show technical "null" or database errors directly if we can't parse them
+            const userFriendlyMessage = error.message?.includes('duplicate key') ? 'هذا الإعلان موجود بالفعل' : (error.message || 'حدث خطأ غير متوقع');
+            toast.error(`نأسف، حدث خطأ: ${userFriendlyMessage}`);
         } finally {
             setLoading(false);
         }
@@ -197,7 +206,7 @@ export function MarketplaceItemForm({ initialData, categoryConfig, onSuccess }: 
                 <ImageUpload
                     value={images}
                     onChange={setImages}
-                    maxFiles={5}
+                    maxFiles={10}
                 />
                 {existingImages.length > 0 && (
                     <div className="mt-4 grid grid-cols-5 gap-2">

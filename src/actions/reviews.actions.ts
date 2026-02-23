@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { CreateReviewDTO } from '@/domain/entities/review'
 import { SupabaseReviewRepository } from '@/data/repositories/supabase-review.repository'
+import { sanitizeText } from '@/lib/utils/sanitize'
 
 // Helper to create use cases with authenticated client
 async function getAuthenticatedUseCases() {
@@ -40,6 +41,14 @@ export async function createReviewAction(placeId: string, placeSlug: string, dat
         throw new Error('يجب تسجيل الدخول لكتابة تقييم')
     }
 
+    // Server-side validation
+    const rating = Math.min(5, Math.max(1, data.rating))
+    const comment = sanitizeText(data.comment)
+
+    if (comment.length < 5) {
+        throw new Error('التعليق قصير جداً، يجب أن يكون ٥ أحرف على الأقل')
+    }
+
     const userName = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'مستخدم'
     const userAvatar = user.user_metadata?.avatar_url || user.user_metadata?.picture
 
@@ -49,7 +58,8 @@ export async function createReviewAction(placeId: string, placeSlug: string, dat
             userId: user.id,
             userName,
             userAvatar,
-            ...data
+            rating,
+            comment
         })
 
         revalidatePath(`/places/${placeSlug}`)
