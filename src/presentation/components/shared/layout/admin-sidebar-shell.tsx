@@ -26,6 +26,7 @@ import {
     MapPin,
     Layers,
     Activity,
+    Mail,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -79,6 +80,7 @@ const SUPER_ADMIN_GROUPS: NavGroup[] = [
             { name: 'المستخدمين', href: '/admin/users', icon: Users },
             { name: 'إدارة التصنيفات', href: '/admin/categories', icon: Layers },
             { name: 'البلاغات', href: '/admin/reports', icon: Flag },
+            { name: 'رسائل التواصل', href: '/admin/contact', icon: Mail },
             { name: 'نبض السويس', href: '/admin/city-pulse', icon: Activity },
             { name: 'إعدادات الموقع', href: '/admin/settings', icon: Settings },
         ],
@@ -132,6 +134,7 @@ function getConfig(variant: AdminNavProps['variant'], isSuperAdmin?: boolean, co
                     { name: 'المستخدمين', href: '/admin/users', icon: Users },
                     { name: 'إدارة التصنيفات', href: '/admin/categories', icon: Layers },
                     { name: 'البلاغات', href: '/admin/reports', icon: Flag, count: counts?.reports },
+                    { name: 'رسائل التواصل', href: '/admin/contact', icon: Mail },
                     { name: 'نبض السويس', href: '/admin/city-pulse', icon: Activity },
                     { name: 'إعدادات الموقع', href: '/admin/settings', icon: Settings },
                 ],

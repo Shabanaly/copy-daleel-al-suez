@@ -65,39 +65,46 @@ export class SupabaseArticleRepository implements ArticleRepository {
         return this.mapToEntity(data);
     }
 
-    async getAll(limit: number = 10, offset: number = 0, client?: unknown): Promise<Article[]> {
+    async getAll(limit: number = 10, offset: number = 0, client?: unknown): Promise<{ articles: Article[], count: number }> {
         const supabaseClient = (client as import('@supabase/supabase-js').SupabaseClient) || this.supabase;
-        if (!supabaseClient) return [];
+        if (!supabaseClient) return { articles: [], count: 0 };
 
-        const { data, error } = await supabaseClient
+        const { data, error, count } = await supabaseClient
             .from("articles")
-            .select("id, title, excerpt, cover_image_url, category, created_at, display_order")
+            .select("id, title, excerpt, cover_image_url, category, created_at, display_order", { count: 'exact' })
             .order("display_order", { ascending: true })
             .order("created_at", { ascending: false })
             .range(offset, offset + limit - 1);
 
         if (error) throw new Error(error.message);
-        return (data as any[]).map(row => this.mapToEntity(row));
+        return {
+            articles: (data as any[]).map(row => this.mapToEntity(row)),
+            count: count || 0
+        };
     }
 
-    async getPublished(limit: number = 10, offset: number = 0, client?: unknown): Promise<Article[]> {
+    async getPublished(limit: number = 10, offset: number = 0, client?: unknown): Promise<{ articles: Article[], count: number }> {
         const supabaseClient = (client as import('@supabase/supabase-js').SupabaseClient) || this.supabase;
-        if (!supabaseClient) return [];
+        if (!supabaseClient) return { articles: [], count: 0 };
 
-        const { data, error } = await supabaseClient
+        const { data, error, count } = await supabaseClient
             .from("articles")
-            .select("id, title, excerpt, cover_image_url, category, created_at, display_order")
+            .select("id, title, excerpt, cover_image_url, category, created_at, display_order", { count: 'exact' })
             .eq("is_published", true)
             .order("display_order", { ascending: true })
             .order("created_at", { ascending: false })
             .range(offset, offset + limit - 1);
 
         if (error) throw new Error(error.message);
-        return (data as any[]).map(row => this.mapToEntity(row));
+        return {
+            articles: (data as any[]).map(row => this.mapToEntity(row)),
+            count: count || 0
+        };
     }
 
     async getLatest(limit: number = 5): Promise<Article[]> {
-        return this.getPublished(limit, 0);
+        const result = await this.getPublished(limit, 0);
+        return result.articles;
     }
 
     private mapToEntity(row: any): Article {

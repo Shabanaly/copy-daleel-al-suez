@@ -4,8 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { PlaceMapper } from "@/data/mappers/place.mapper";
 import { getPlacesAction } from "@/app/actions/get-places-action";
 
-export const dynamic = 'force-dynamic'; // Force dynamic rendering
-export const revalidate = 0; // No caching
+// export const dynamic = 'force-dynamic'; // Force dynamic rendering
+export const revalidate = 300; // 5 minutes caching (ISR)
 
 interface SearchParams {
     search?: string;

@@ -41,6 +41,14 @@ export async function createReviewAction(placeId: string, placeSlug: string, dat
         throw new Error('يجب تسجيل الدخول لكتابة تقييم')
     }
 
+    // Rate Limiting (Prevent spam)
+    const { rateLimit } = await import('@/lib/utils/rate-limit')
+    const limiter = await rateLimit(`review_create_${user.id}`, 5, 3600000) // 5 reviews per hour
+
+    if (!limiter.success) {
+        throw new Error('لقد وصلت للحد الأقصى للتقييمات حالياً. حاول لاحقاً.')
+    }
+
     // Server-side validation
     const rating = Math.min(5, Math.max(1, data.rating))
     const comment = sanitizeText(data.comment)

@@ -6,11 +6,13 @@ import { Review } from '@/domain/entities/review'
 import { Star, MapPin, Trash2, ExternalLink, Loader2, MessageSquare } from 'lucide-react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
+import { ConfirmDialog } from '@/presentation/components/ui/ConfirmDialog'
 import { toast } from 'sonner'
 
 export function UserReviewsSection() {
     const [reviews, setReviews] = useState<Review[]>([])
     const [loading, setLoading] = useState(true)
+    const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean, reviewId: string, placeSlug: string } | null>(null)
 
     useEffect(() => {
         const fetchReviews = async () => {
@@ -26,12 +28,12 @@ export function UserReviewsSection() {
         fetchReviews()
     }, [])
 
-    const handleDelete = async (reviewId: string, placeSlug: string) => {
-        if (!confirm('هل أنت متأكد من حذف هذا التقييم؟')) return
+    const handleDelete = async () => {
+        if (!deleteModal) return
 
         try {
-            await deleteReviewAction(reviewId, placeSlug)
-            setReviews(prev => prev.filter(r => r.id !== reviewId))
+            await deleteReviewAction(deleteModal.reviewId, deleteModal.placeSlug)
+            setReviews(prev => prev.filter(r => r.id !== deleteModal.reviewId))
             toast.success('تم حذف التقييم بنجاح')
         } catch (error) {
             toast.error('فشل حذف التقييم')
@@ -100,7 +102,7 @@ export function UserReviewsSection() {
 
                         <div className="flex items-center gap-2 self-end md:self-start">
                             <button
-                                onClick={() => handleDelete(review.id, (review as any).placeSlug)}
+                                onClick={() => setDeleteModal({ isOpen: true, reviewId: review.id, placeSlug: review.placeSlug || '' })}
                                 className="p-2 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
                                 title="حذف التقييم"
                             >
@@ -110,6 +112,16 @@ export function UserReviewsSection() {
                     </div>
                 </motion.div>
             ))}
+
+            <ConfirmDialog
+                isOpen={!!deleteModal?.isOpen}
+                onClose={() => setDeleteModal(null)}
+                onConfirm={handleDelete}
+                title="حذف التقييم"
+                description="هل أنت متأكد من حذف هذا التقييم؟ لا يمكن التراجع عن هذا الإجراء."
+                confirmText="حذف"
+                variant="danger"
+            />
         </div>
     )
 }

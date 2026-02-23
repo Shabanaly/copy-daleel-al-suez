@@ -1,11 +1,10 @@
 'use server'
 
-import { getEventByIdUseCase } from "@/di/modules";
+import { getEventByIdUseCase, getActiveEventsUseCase } from "@/di/modules";
 import { SuezEvent } from "@/domain/entities/suez-event";
 
 import { createClient, createReadOnlyClient } from "@/lib/supabase/server";
 import { unstable_cache } from "next/cache";
-import { eventRepository } from "@/di/modules";
 import { cache as reactCache } from "react";
 
 export const getEventAction = reactCache(async (id: string): Promise<SuezEvent | null> => {
@@ -18,11 +17,13 @@ export const getEventAction = reactCache(async (id: string): Promise<SuezEvent |
     }
 })
 
-export const getCachedActiveEvents = unstable_cache(
-    async (limit: number = 10) => {
-        const supabase = await createReadOnlyClient();
-        return await eventRepository.getEvents({ status: 'active', limit }, supabase);
-    },
-    ['active-events'],
-    { revalidate: 3600, tags: ['events'] }
-)
+export async function getEventsAction(limit: number = 10, offset: number = 0) {
+    return await unstable_cache(
+        async (l: number, o: number) => {
+            const supabase = await createReadOnlyClient();
+            return await getActiveEventsUseCase.execute(l, o, supabase);
+        },
+        ['active-events', limit.toString(), offset.toString()],
+        { revalidate: 3600, tags: ['events'] }
+    )(limit, offset);
+}

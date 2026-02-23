@@ -4,7 +4,7 @@ import { ArticleRepository } from '../interfaces/article-repository';
 export class GetArticlesUseCase {
     constructor(private articleRepository: ArticleRepository) { }
 
-    async execute(limit: number = 10, offset: number = 0, client?: unknown): Promise<Article[]> {
+    async execute(limit: number = 10, offset: number = 0, client?: unknown): Promise<{ articles: Article[], count: number }> {
         return await this.articleRepository.getPublished(limit, offset, client);
     }
 }

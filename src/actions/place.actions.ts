@@ -7,17 +7,21 @@ import { createClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 import { createPlaceUseCase } from "@/di/modules"
 import { createPlaceSchema, updatePlaceSchema } from "@/domain/schemas/place.schema";
+import { ActionResult } from "@/types/actions";
+import { verifyRole } from "@/lib/auth/role-guard";
+import { checkIdempotency, saveIdempotency } from "@/lib/utils/idempotency";
 
 // Define the state type expected by useActionState
-export type PlaceState = {
-    message?: string
-    errors?: Record<string, string[]>
-    success?: boolean
-    data?: Place
-}
+export type PlaceState = ActionResult<Place>;
 
-export async function createPlaceAction(rawData: any): Promise<PlaceState> {
+export async function createPlaceAction(rawData: any, idempotencyKey?: string): Promise<PlaceState> {
     try {
+        // 0. Check Idempotency
+        if (idempotencyKey) {
+            const existingResponse = await checkIdempotency(idempotencyKey);
+            if (existingResponse) return existingResponse;
+        }
+
         const supabase = await createClient()
         const { data: { user } } = await supabase.auth.getUser()
 
@@ -48,7 +52,14 @@ export async function createPlaceAction(rawData: any): Promise<PlaceState> {
         revalidatePath('/')
         revalidatePath('/places')
 
-        // 3. Notify Admins
+        const finalResponse = { success: true, message: "تم إرسال المكان بنجاح، بانتظار المراجعة", data: place as Place };
+
+        // 3. Save Idempotency
+        if (idempotencyKey) {
+            await saveIdempotency(idempotencyKey, finalResponse, user.id);
+        }
+
+        // 4. Notify Admins
         try {
             const { notifyAdminsAction } = await import('./notifications.actions')
             await notifyAdminsAction({
@@ -63,10 +74,9 @@ export async function createPlaceAction(rawData: any): Promise<PlaceState> {
             })
         } catch (notifyError) {
             console.error("Failed to notify admins about new place:", notifyError)
-            // Don't fail the whole action if notification fails
         }
 
-        return { success: true, message: "تم إرسال المكان بنجاح، بانتظار المراجعة", data: place }
+        return finalResponse;
     } catch (error) {
         console.error("Create Place Error:", error)
         const message = error instanceof Error ? error.message : "فشل في إضافة المكان"
@@ -79,14 +89,13 @@ export async function createPlaceAction(rawData: any): Promise<PlaceState> {
 
 export async function updatePlaceAction(id: string, rawData: any): Promise<PlaceState> {
     try {
+        // 1. Security Check: verifyRole handles auth and profile role
+        const { user, profile, error: authError } = await verifyRole(['admin', 'super_admin', 'user']);
+        if (authError) return { message: authError, success: false };
+
         const supabase = await createClient()
-        const { data: { user } } = await supabase.auth.getUser()
 
-        if (!user) {
-            return { message: "يجب تسجيل الدخول أولاً", success: false }
-        }
-
-        // 1. Validate with Zod (Partial update)
+        // 2. Validate with Zod (Partial update)
         const result = updatePlaceSchema.safeParse(rawData);
         if (!result.success) {
             const errors: Record<string, string[]> = {};
@@ -100,7 +109,7 @@ export async function updatePlaceAction(id: string, rawData: any): Promise<Place
 
         const validatedData = result.data;
 
-        // 2. Check existence
+        // 3. Check existence
         const placeRepository = new SupabasePlaceRepository(supabase);
         const existingPlace = await placeRepository.getPlaceById(id);
 
@@ -108,21 +117,15 @@ export async function updatePlaceAction(id: string, rawData: any): Promise<Place
             return { message: "المكان غير موجود", success: false }
         }
 
-        // 3. Security Check: Ownership or Admin
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', user.id)
-            .single()
-
-        const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin'
-        const isOwner = existingPlace.createdBy === user.id || existingPlace.ownerId === user.id
+        // 4. Ownership check (if not admin)
+        const isAdmin = profile.role === 'admin' || profile.role === 'super_admin';
+        const isOwner = existingPlace.createdBy === user.id || existingPlace.ownerId === user.id;
 
         if (!isAdmin && !isOwner) {
             return { message: "غير مسموح لك بتعديل هذا المكان", success: false }
         }
 
-        // 4. Update
+        // 5. Update
         const updatedPlace = await placeRepository.updatePlace(id, validatedData as any);
 
         revalidatePath('/')
@@ -130,7 +133,7 @@ export async function updatePlaceAction(id: string, rawData: any): Promise<Place
         revalidatePath(`/places/${updatedPlace.slug}`)
         revalidatePath(`/content-admin/places`)
 
-        return { success: true, message: "تم تحديث بيانات المكان بنجاح", data: updatedPlace }
+        return { success: true, message: "تم تحديث بيانات المكان بنجاح", data: updatedPlace as Place }
     } catch (error) {
         console.error("Update Place Error:", error)
         const message = error instanceof Error ? error.message : "فشل في تحديث المكان"

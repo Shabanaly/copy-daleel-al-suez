@@ -8,7 +8,8 @@ import {
     deleteCityPulseItemAction,
     CreateCityPulseInput,
 } from '@/actions/city-pulse.actions';
-import { Sparkles, TrendingUp, MapPin, Zap, Info, Calendar, Plus, Pencil, Trash2, ToggleLeft, ToggleRight, X, Save } from 'lucide-react';
+import { Sparkles, TrendingUp, MapPin, Zap, Info, Calendar, Plus, Pencil, Trash2, ToggleLeft, ToggleRight, X, Save, Eye } from 'lucide-react';
+import { CityPulseTicker } from '@/presentation/components/home/city-pulse-ticker';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -194,6 +195,33 @@ export function CityPulseManager({ initialItems }: { initialItems: CityPulseItem
         calendar: <Calendar size={14} className="text-purple-400" />,
     };
 
+    // ── Timezone Helpers ──────────────────────────────────────────────────────
+
+    const toCairoISO = (dateStr?: string | null) => {
+        if (!dateStr) return '';
+        // Convert UTC string to Cairo time YYYY-MM-DDTHH:mm
+        const date = new Date(dateStr);
+        return new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'Africa/Cairo',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        }).format(date).replace(', ', 'T');
+    };
+
+    const getStatus = (item: CityPulseItem) => {
+        if (!item.isActive) return { label: 'معطّل', color: 'text-muted-foreground' };
+
+        const now = new Date();
+        if (item.startsAt && new Date(item.startsAt) > now) return { label: 'مجدول', color: 'text-blue-500' };
+        if (item.endsAt && new Date(item.endsAt) < now) return { label: 'منتهي', color: 'text-orange-500' };
+
+        return { label: 'نشط الآن', color: 'text-green-500' };
+    };
+
     // ── CRUD handlers ──────────────────────────────────────────────────────────
 
     const handleCreate = (form: FormState) => {
@@ -267,6 +295,21 @@ export function CityPulseManager({ initialItems }: { initialItems: CityPulseItem
 
     return (
         <div className="space-y-6" dir="rtl">
+            {/* Live Preview */}
+            <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+                <div className="px-4 py-2 bg-muted/50 border-b border-border flex items-center gap-2">
+                    <Eye size={14} className="text-primary" />
+                    <span className="text-xs font-bold">معاينة مباشرة (على الموقع حالياً)</span>
+                </div>
+                <CityPulseTicker items={items.filter(i => {
+                    if (!i.isActive) return false;
+                    const now = new Date();
+                    if (i.startsAt && new Date(i.startsAt) > now) return false;
+                    if (i.endsAt && new Date(i.endsAt) < now) return false;
+                    return true;
+                })} />
+            </div>
+
             {/* Error banner */}
             {error && (
                 <div className="bg-red-500/10 border border-red-500/30 text-red-500 text-sm px-4 py-3 rounded-lg">
@@ -308,8 +351,8 @@ export function CityPulseManager({ initialItems }: { initialItems: CityPulseItem
                                     text: item.text,
                                     iconType: item.iconType,
                                     isActive: item.isActive,
-                                    startsAt: item.startsAt ? new Date(item.startsAt).toISOString().slice(0, 16) : '',
-                                    endsAt: item.endsAt ? new Date(item.endsAt).toISOString().slice(0, 16) : '',
+                                    startsAt: toCairoISO(item.startsAt),
+                                    endsAt: toCairoISO(item.endsAt),
                                     priority: item.priority,
                                 }}
                                 onSave={(form) => handleUpdate(item.id, form)}
@@ -325,6 +368,9 @@ export function CityPulseManager({ initialItems }: { initialItems: CityPulseItem
                                 <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium truncate">{item.text}</p>
                                     <div className="flex items-center gap-3 mt-1">
+                                        <span className={`text-xs font-bold ${getStatus(item).color}`}>
+                                            {getStatus(item).label}
+                                        </span>
                                         <span className="text-xs text-muted-foreground">أولوية: {item.priority}</span>
                                         <span className="text-xs bg-muted px-2 py-0.5 rounded-full">{SOURCE_LABELS[item.source]}</span>
                                         {item.endsAt && (

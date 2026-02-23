@@ -58,6 +58,14 @@ export async function submitQuestionAction(data: {
 
     if (!user) throw new Error('يجب تسجيل الدخول لطرح سؤال')
 
+    // Rate Limiting (Prevent spam)
+    const { rateLimit } = await import('@/lib/utils/rate-limit')
+    const limiter = await rateLimit(`question_create_${user.id}`, 3, 3600000) // 3 questions per hour
+
+    if (!limiter.success) {
+        return { success: false, error: 'لقد وصلت للحد الأقصى للأسئلة حالياً. حاول لاحقاً.' }
+    }
+
     const repository = new SupabaseCommunityRepository(supabase)
     try {
         const content = sanitizeText(data.content)
@@ -95,6 +103,14 @@ export async function submitAnswerAction(questionId: string, body: string) {
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) throw new Error('يجب تسجيل الدخول للإجابة')
+
+    // Rate Limiting (Prevent spam)
+    const { rateLimit } = await import('@/lib/utils/rate-limit')
+    const limiter = await rateLimit(`answer_create_${user.id}`, 10, 3600000) // 10 answers per hour
+
+    if (!limiter.success) {
+        return { success: false, error: 'لقد وصلت للحد الأقصى للإجابات حالياً. حاول لاحقاً.' }
+    }
 
     const repository = new SupabaseCommunityRepository(supabase)
     try {

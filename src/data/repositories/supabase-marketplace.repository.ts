@@ -303,19 +303,23 @@ export class SupabaseMarketplaceRepository {
         }
     }
 
-    async getMyItems(userId: string, client?: unknown): Promise<MarketplaceItem[]> {
+    async getMyItems(userId: string, limit: number = 20, offset: number = 0, client?: unknown): Promise<{ items: MarketplaceItem[], count: number }> {
         const supabase = (client as SupabaseClient) || this.supabase;
-        if (!supabase) return [];
+        if (!supabase) return { items: [], count: 0 };
 
-        const { data, error } = await supabase
+        const { data, error, count } = await supabase
             .from("marketplace_items")
-            .select(this.listFields)
+            .select(this.listFields, { count: 'exact' })
             .eq("seller_id", userId)
             .neq("status", "removed")
-            .order("created_at", { ascending: false });
+            .order("created_at", { ascending: false })
+            .range(offset, offset + limit - 1);
 
         if (error) throw new Error(error.message);
-        return data.map((row: any) => this.mapToEntity(row));
+        return {
+            items: data.map((row: any) => this.mapToEntity(row)),
+            count: count || 0
+        };
     }
 
     private mapToEntity(row: any): MarketplaceItem {
@@ -421,19 +425,23 @@ export class SupabaseMarketplaceRepository {
         return data;
     }
 
-    async getSellerItems(sellerId: string, client?: unknown): Promise<MarketplaceItem[]> {
+    async getSellerItems(sellerId: string, limit: number = 20, offset: number = 0, client?: unknown): Promise<{ items: MarketplaceItem[], count: number }> {
         const supabase = (client as SupabaseClient) || this.supabase;
-        if (!supabase) return [];
+        if (!supabase) return { items: [], count: 0 };
 
-        const { data, error } = await supabase
+        const { data, error, count } = await supabase
             .from("marketplace_items")
-            .select(this.listFields)
+            .select(this.listFields, { count: 'exact' })
             .eq("seller_id", sellerId)
             .eq("status", "active")
             .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
-            .order("created_at", { ascending: false });
+            .order("created_at", { ascending: false })
+            .range(offset, offset + limit - 1);
 
         if (error) throw new Error(error.message);
-        return data.map((row: any) => this.mapToEntity(row));
+        return {
+            items: data.map((row: any) => this.mapToEntity(row)),
+            count: count || 0
+        };
     }
 }

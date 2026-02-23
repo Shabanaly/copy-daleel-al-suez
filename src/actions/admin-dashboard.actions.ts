@@ -1,6 +1,8 @@
 'use server'
 
 import { requireAdmin } from '@/lib/supabase/auth-utils'
+import { unstable_cache } from 'next/cache'
+import { createClient } from '@/lib/supabase/server'
 
 /**
  * جلب إحصائيات النمو للوحة التحكم
@@ -50,29 +52,45 @@ export async function getDashboardGrowthAction() {
 }
 
 /**
- * جلب أرقام التنبيهات المعلقة لـ هيدر الإدارة
+ * جلب أرقام التنبيهات المعلقة لـ هيدر الإدارة — مع تخزين مؤقت لمدة 30 ثانية
  */
 export async function getPendingCountsAction() {
-    try {
-        const { supabase } = await requireAdmin()
-
-        const [reportsRes, claimsRes, placesRes, marketplaceRes] = await Promise.all([
-            supabase.from('reports').select('id', { count: 'exact' }).eq('status', 'pending'),
-            supabase.from('business_claims').select('id', { count: 'exact' }).eq('status', 'pending'),
-            supabase.from('places').select('id', { count: 'exact' }).eq('status', 'pending'),
-            supabase.from('marketplace_items').select('id', { count: 'exact' }).eq('status', 'pending')
-        ])
-
-        return {
-            success: true,
-            counts: {
-                reports: reportsRes.count || 0,
-                claims: claimsRes.count || 0,
-                places: placesRes.count || 0,
-                marketplace: marketplaceRes.count || 0
-            }
-        }
-    } catch (error: any) {
-        return { success: false, error: error.message }
+    // 1. Security check before cache
+    const { isAdmin } = await import('@/lib/auth/role-guard')
+    if (!await isAdmin()) {
+        return { success: false, error: 'Unauthorized', counts: { reports: 0, claims: 0, places: 0, marketplace: 0 } }
     }
+
+    return await unstable_cache(
+        async () => {
+            try {
+                const supabase = await createClient()
+
+                const [reportsRes, claimsRes, placesRes, marketplaceRes] = await Promise.all([
+                    supabase.from('reports').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+                    supabase.from('business_claims').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+                    supabase.from('places').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+                    supabase.from('marketplace_items').select('id', { count: 'exact', head: true }).eq('status', 'pending')
+                ])
+
+                return {
+                    success: true,
+                    counts: {
+                        reports: reportsRes.count || 0,
+                        claims: claimsRes.count || 0,
+                        places: placesRes.count || 0,
+                        marketplace: marketplaceRes.count || 0
+                    }
+                }
+            } catch (error: any) {
+                console.error('getPendingCountsAction error:', error)
+                return {
+                    success: false,
+                    counts: { reports: 0, claims: 0, places: 0, marketplace: 0 }
+                }
+            }
+        },
+        ['admin-pending-counts'],
+        { revalidate: 30, tags: ['admin-stats'] }
+    )()
 }

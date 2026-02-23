@@ -29,10 +29,15 @@ interface Profile {
     [key: string]: unknown
 }
 
-export function ProfileContent() {
-    const [user, setUser] = useState<SupabaseUser | null>(null)
-    const [profile, setProfile] = useState<Profile | null>(null)
-    const [loading, setLoading] = useState(true)
+interface ProfileContentProps {
+    initialUser: SupabaseUser
+    initialProfile: Profile | null
+}
+
+export function ProfileContent({ initialUser, initialProfile }: ProfileContentProps) {
+    const [user, setUser] = useState<SupabaseUser | null>(initialUser)
+    const [profile, setProfile] = useState<Profile | null>(initialProfile)
+    const [loading, setLoading] = useState(!initialUser)
     const [activeTab, setActiveTab] = useState<TabType>('overview')
     const router = useRouter()
     const searchParams = useSearchParams()
@@ -48,36 +53,38 @@ export function ProfileContent() {
     }, [searchParams])
 
     useEffect(() => {
-        const getUser = async () => {
-            try {
-                const { data: { user }, error } = await supabase.auth.getUser()
+        if (!initialUser) {
+            const getUser = async () => {
+                try {
+                    const { data: { user }, error } = await supabase.auth.getUser()
 
-                if (error || !user) {
-                    router.push('/login')
-                    return
+                    if (error || !user) {
+                        router.push('/login')
+                        return
+                    }
+
+                    setUser(user)
+
+                    const { data: profile } = await supabase
+                        .from('profiles')
+                        .select('*')
+                        .eq('id', user.id)
+                        .single()
+
+                    if (profile) {
+                        setProfile(profile)
+                    }
+
+                } catch (error: unknown) {
+                    console.error('Error fetching user:', error)
+                } finally {
+                    setLoading(false)
                 }
-
-                setUser(user)
-
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('*')
-                    .eq('id', user.id)
-                    .single()
-
-                if (profile) {
-                    setProfile(profile)
-                }
-
-            } catch (error: unknown) {
-                console.error('Error fetching user:', error)
-            } finally {
-                setLoading(false)
             }
-        }
 
-        getUser()
-    }, [router, supabase])
+            getUser()
+        }
+    }, [initialUser, router, supabase])
 
 
     // Unified logout handled by useAuthActions

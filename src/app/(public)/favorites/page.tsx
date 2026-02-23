@@ -19,11 +19,10 @@ export default async function FavoritesPage() {
     }
 
     const favoritesRepo = new SupabaseFavoritesRepository(supabase)
-    const [places, ads] = await Promise.all([
+    const [placeFavorites, adFavorites] = await Promise.all([
         favoritesRepo.getUserFavorites(user.id),
         favoritesRepo.getUserFavoriteAds(user.id)
     ])
-
 
     return (
         <div className="container mx-auto px-4 py-8 md:py-12">
@@ -45,20 +44,28 @@ export default async function FavoritesPage() {
                 <TabsList className="grid w-full max-w-[400px] grid-cols-2 mb-8 bg-muted/50 p-1">
                     <TabsTrigger value="places" className="flex items-center gap-2 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
                         <MapPin size={16} />
-                        الأماكن ({places.length})
+                        الأماكن ({placeFavorites.length})
                     </TabsTrigger>
                     <TabsTrigger value="ads" className="flex items-center gap-2 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
                         <Store size={16} />
-                        الإعلانات ({ads.length})
+                        الإعلانات ({adFavorites.length})
                     </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="places" className="mt-0">
-                    {places.length > 0 ? (
+                    {placeFavorites.length > 0 ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                            {places.map((place) => (
-                                <div key={place.id} className="h-full">
-                                    <PlaceCard place={place} />
+                            {placeFavorites.map((fav) => (
+                                <div key={fav.id} className="h-full">
+                                    {fav.place ? (
+                                        <PlaceCard place={fav.place} />
+                                    ) : (
+                                        <UnavailableCard
+                                            type="place"
+                                            id={fav.placeId}
+                                            favoriteId={fav.id}
+                                        />
+                                    )}
                                 </div>
                             ))}
                         </div>
@@ -80,11 +87,19 @@ export default async function FavoritesPage() {
                 </TabsContent>
 
                 <TabsContent value="ads" className="mt-0">
-                    {ads.length > 0 ? (
+                    {adFavorites.length > 0 ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                            {ads.map((ad) => (
-                                <div key={ad.id} className="h-full">
-                                    <MarketplaceItemCard item={ad} />
+                            {adFavorites.map((fav) => (
+                                <div key={fav.id} className="h-full">
+                                    {fav.item ? (
+                                        <MarketplaceItemCard item={fav.item} />
+                                    ) : (
+                                        <UnavailableCard
+                                            type="ad"
+                                            id={fav.itemId}
+                                            favoriteId={fav.id}
+                                        />
+                                    )}
                                 </div>
                             ))}
                         </div>
@@ -105,6 +120,22 @@ export default async function FavoritesPage() {
                     )}
                 </TabsContent>
             </Tabs>
+        </div>
+    )
+}
+
+function UnavailableCard({ type, id, favoriteId }: { type: 'place' | 'ad', id: string, favoriteId: string }) {
+    return (
+        <div className="h-full flex flex-col items-center justify-center p-6 border border-border border-dashed rounded-2xl bg-muted/5 gap-4 grayscale opacity-70 transition-all hover:grayscale-0 hover:opacity-100">
+            <div className="p-3 bg-muted rounded-full">
+                {type === 'place' ? <MapPin size={24} className="text-muted-foreground" /> : <Store size={24} className="text-muted-foreground" />}
+            </div>
+            <div className="text-center">
+                <h3 className="font-bold text-foreground">هذا {type === 'place' ? 'المكان' : 'الإعلان'} لم يعد متاحاً</h3>
+                <p className="text-sm text-muted-foreground mt-1">تم حذفه أو لم يعد نشطاً</p>
+            </div>
+            {/* Note: In a real app we'd add a Client Component button here to remove the favorite */}
+            <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-tighter">ID: {id.substring(0, 8)}</p>
         </div>
     )
 }

@@ -25,6 +25,7 @@ type AddPlaceFormProps = {
 }
 
 const initialState: PlaceState = {
+    success: false,
     message: '',
     errors: {}
 }
@@ -217,19 +218,24 @@ export default function AddPlaceForm({ categories, areas, initialPlace }: AddPla
         fetchDistricts();
     }, []);
 
-    const handleNameBlur = async () => {
-        if (isEditMode || slug !== '' || !name.trim()) return
+    const [debouncedName] = useDebounce(name, 1000)
 
-        setIsGeneratingSlug(true)
-        try {
-            const generatedSlug = await translateAndSlugify(name)
-            if (generatedSlug) setSlug(generatedSlug)
-        } catch (error) {
-            console.error('Failed to generate automatic slug:', error)
-        } finally {
-            setIsGeneratingSlug(false)
+    useEffect(() => {
+        const generateAutoSlug = async () => {
+            if (isEditMode || slug !== '' || !debouncedName.trim()) return
+
+            setIsGeneratingSlug(true)
+            try {
+                const generatedSlug = await translateAndSlugify(debouncedName)
+                if (generatedSlug) setSlug(generatedSlug)
+            } catch (error) {
+                console.error('Failed to generate automatic slug:', error)
+            } finally {
+                setIsGeneratingSlug(false)
+            }
         }
-    }
+        generateAutoSlug()
+    }, [debouncedName, isEditMode, slug])
 
     useEffect(() => {
         if (state.success) {
@@ -353,7 +359,6 @@ export default function AddPlaceForm({ categories, areas, initialPlace }: AddPla
                                 name="name"
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
-                                onBlur={handleNameBlur}
                                 required
                                 className="w-full px-4 py-3 bg-background border border-border rounded-xl text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors placeholder:text-muted-foreground/50"
                                 placeholder={type === 'business' ? "مثال: مطعم اسماك السويس" : "مثال: ورشة الأسطى محمد"}

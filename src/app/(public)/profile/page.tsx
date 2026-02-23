@@ -1,17 +1,25 @@
-import { Suspense } from 'react'
-import { Loader2 } from 'lucide-react'
+import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
 import { ProfileContent } from '@/presentation/features/profile/profile-content'
 
-export const dynamic = 'force-dynamic'
+export default async function ProfilePage() {
+    const supabase = await createClient()
+    const { data: { user }, error } = await supabase.auth.getUser()
 
-export default function ProfilePage() {
+    if (error || !user) {
+        redirect('/login')
+    }
+
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+
     return (
-        <Suspense fallback={
-            <div className="min-h-[80vh] flex items-center justify-center">
-                <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            </div>
-        }>
-            <ProfileContent />
-        </Suspense>
+        <ProfileContent
+            initialUser={user}
+            initialProfile={profile}
+        />
     )
 }

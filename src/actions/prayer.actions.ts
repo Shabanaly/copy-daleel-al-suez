@@ -8,6 +8,7 @@ interface PrayerTimes {
     asr: string
     maghrib: string
     isha: string
+    isFallback?: boolean
     nextPrayer: {
         name: string
         time: string
@@ -16,6 +17,23 @@ interface PrayerTimes {
 }
 
 export async function getPrayerTimes(): Promise<PrayerTimes | null> {
+    const getFallback = (): PrayerTimes => {
+        return {
+            fajr: '04:30',
+            sunrise: '06:00',
+            dhuhr: '12:15',
+            asr: '15:30',
+            maghrib: '18:00',
+            isha: '19:30',
+            isFallback: true,
+            nextPrayer: {
+                name: 'الفجر',
+                time: '04:30',
+                remainingMinutes: 60
+            }
+        }
+    }
+
     try {
         const today = new Date()
         const day = today.getDate()
@@ -24,7 +42,7 @@ export async function getPrayerTimes(): Promise<PrayerTimes | null> {
 
         const response = await fetch(
             `https://api.aladhan.com/v1/timingsByCity/${day}-${month}-${year}?city=Suez&country=Egypt&method=5`,
-            { next: { revalidate: 3600 } } // Cache for 1 hour
+            { next: { revalidate: 3600 } }
         )
 
         if (!response.ok) {
@@ -61,7 +79,6 @@ export async function getPrayerTimes(): Promise<PrayerTimes | null> {
             }
         }
 
-        // If no prayer found today, next is Fajr tomorrow
         if (minDiff === Infinity) {
             const [hours, minutes] = prayers[0].time.split(':').map(Number)
             const prayerMinutes = hours * 60 + minutes
@@ -76,6 +93,7 @@ export async function getPrayerTimes(): Promise<PrayerTimes | null> {
             asr: timings.Asr,
             maghrib: timings.Maghrib,
             isha: timings.Isha,
+            isFallback: false,
             nextPrayer: {
                 name: nextPrayer.name,
                 time: nextPrayer.time,
@@ -84,20 +102,6 @@ export async function getPrayerTimes(): Promise<PrayerTimes | null> {
         }
     } catch (error) {
         console.error('Prayer API Error:', error instanceof Error ? error.message : String(error))
-
-        // Return static fallback data to ensure build/render doesn't fail
-        return {
-            fajr: '04:30',
-            sunrise: '06:00',
-            dhuhr: '12:15',
-            asr: '15:30',
-            maghrib: '18:00',
-            isha: '19:30',
-            nextPrayer: {
-                name: 'الفجر',
-                time: '04:30',
-                remainingMinutes: 60
-            }
-        }
+        return getFallback()
     }
 }

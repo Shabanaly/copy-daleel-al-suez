@@ -5,7 +5,7 @@ export interface ArticleRepository {
     update(article: UpdateArticleDTO, client?: unknown): Promise<Article>;
     delete(id: string, client?: unknown): Promise<void>;
     getById(id: string, client?: unknown): Promise<Article | null>;
-    getAll(limit?: number, offset?: number, client?: unknown): Promise<Article[]>;
-    getPublished(limit?: number, offset?: number, client?: unknown): Promise<Article[]>;
+    getAll(limit?: number, offset?: number, client?: unknown): Promise<{ articles: Article[], count: number }>;
+    getPublished(limit?: number, offset?: number, client?: unknown): Promise<{ articles: Article[], count: number }>;
     getLatest(limit: number): Promise<Article[]>;
 }

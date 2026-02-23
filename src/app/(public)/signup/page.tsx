@@ -116,6 +116,37 @@ export default function SignUpPage() {
                                 />
                                 <Lock className="absolute left-3 top-3.5 text-muted-foreground w-5 h-5 pointer-events-none" />
                             </div>
+
+                            {/* Password Strength Indicator */}
+                            {password.length > 0 && (
+                                <div className="space-y-1.5 mt-2">
+                                    <div className="flex gap-1 h-1">
+                                        {[1, 2, 3, 4].map((i) => {
+                                            const strength =
+                                                (password.length >= 8 ? 1 : 0) +
+                                                (/[A-Z]/.test(password) ? 1 : 0) +
+                                                (/[0-9]/.test(password) ? 1 : 0) +
+                                                (/[^A-Za-z0-9]/.test(password) ? 1 : 0);
+
+                                            return (
+                                                <div
+                                                    key={i}
+                                                    className={`h-full flex-1 rounded-full transition-colors ${i <= strength
+                                                            ? strength <= 1 ? 'bg-red-500'
+                                                                : strength <= 2 ? 'bg-yellow-500'
+                                                                    : strength <= 3 ? 'bg-blue-500'
+                                                                        : 'bg-green-500'
+                                                            : 'bg-muted'
+                                                        }`}
+                                                />
+                                            );
+                                        })}
+                                    </div>
+                                    <p className="text-[10px] text-muted-foreground">
+                                        كلمة المرور القوية يجب أن تحتوي على ٨ أحرف، حرف كبير، ورقم.
+                                    </p>
+                                </div>
+                            )}
                         </div>
 
                         {message && (

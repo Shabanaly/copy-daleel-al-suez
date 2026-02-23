@@ -6,6 +6,9 @@ import { supabaseAdmin } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { SupabaseNotificationRepository } from '@/data/repositories/supabase-notification.repository'
 import { Notification as DomainNotification } from '@/domain/entities/notification'
+import { ActionResult } from '@/types/actions'
+import { headers } from 'next/headers'
+import { requireAdmin } from '@/lib/supabase/auth-utils'
 
 export interface Notification {
     id: string
@@ -141,6 +144,32 @@ export async function createNotificationAction(params: CreateNotificationParams)
             data: params.data
         })
 
+        // Send Email for Critical Types
+        if (['status_update', 'business_claim', 'admin_alert'].includes(params.type)) {
+            try {
+                const { data: userData } = await supabaseAdmin.auth.admin.getUserById(params.userId)
+                if (userData?.user?.email) {
+                    const { sendEmail } = await import('@/lib/email')
+                    await sendEmail({
+                        to: userData.user.email,
+                        subject: params.title,
+                        html: `
+                            <div dir="rtl" style="font-family: sans-serif; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+                                <h1 style="color: #6366f1;">دليل السويس</h1>
+                                <h2>${params.title}</h2>
+                                <p style="font-size: 16px; line-height: 1.6;">${params.message}</p>
+                                ${params.data?.url ? `<a href="${process.env.NEXT_PUBLIC_SITE_URL}${params.data.url}" style="display: inline-block; padding: 10px 20px; background: #6366f1; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; margin-top: 20px;">عرض التفاصيل</a>` : ''}
+                                <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;" />
+                                <p style="font-size: 12px; color: #888;">© 2024 دليل السويس. جميع الحقوق محفوظة.</p>
+                            </div>
+                        `
+                    })
+                }
+            } catch (emailErr) {
+                console.error('📧 Email sending failed:', emailErr)
+            }
+        }
+
         return { success: true, notification: mapToUINotification(notification) }
     } catch (error: any) {
         console.error('❌ createNotificationAction failed:', error)
@@ -148,8 +177,8 @@ export async function createNotificationAction(params: CreateNotificationParams)
     }
 }
 
-/** Validates, sanitizes and submits contact form - use this instead of notifyAdminsAction for contact form */
-export async function submitContactFormAction(data: { name: string; email: string; message: string }) {
+/** Validates, sanitizes and submits contact form - stores in DB and notifies admins */
+export async function submitContactFormAction(data: { name: string; email: string; message: string }): Promise<ActionResult> {
     const name = sanitizeText(data.name || '').trim()
     const email = sanitizeText(data.email || '').trim()
     const message = sanitizeText(data.message || '').trim()
@@ -159,12 +188,42 @@ export async function submitContactFormAction(data: { name: string; email: strin
     if (!message || message.length < 10) return { success: false, error: 'الرسالة يجب أن تكون 10 أحرف على الأقل' }
     if (message.length > 2000) return { success: false, error: 'الرسالة طويلة جداً' }
 
-    return notifyAdminsAction({
-        title: 'رسالة تواصل جديدة ✉️',
-        message: `وصلت رسالة جديدة من ${name} (${email})`,
-        type: 'contact_message',
-        data: { name, email, message, url: '/content-admin/notifications' }
-    })
+    try {
+        const headerList = await headers()
+        const ip = headerList.get('x-forwarded-for')?.split(',')[0] || headerList.get('x-real-ip') || 'unknown'
+
+        // 1. Simple Rate Limit Check (max 3 messages per hour per email or IP)
+        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
+        const { count, error: countError } = await supabaseAdmin
+            .from('contact_messages')
+            .select('*', { count: 'exact', head: true })
+            .or(`email.eq.${email},ip_address.eq.${ip}`)
+            .gt('created_at', oneHourAgo)
+
+        if (!countError && count && count >= 3) {
+            return { success: false, error: 'لقد تجاوزت حد الإرسال المسموح به (3 رسائل في الساعة). يرجى المحاولة لاحقاً.' }
+        }
+
+        // 2. Store in Database
+        const { error: insertError } = await supabaseAdmin
+            .from('contact_messages')
+            .insert({ name, email, message, ip_address: ip })
+
+        if (insertError) throw insertError
+
+        // 3. Notify Admins
+        await notifyAdminsAction({
+            title: 'رسالة تواصل جديدة ✉️',
+            message: `وصلت رسالة جديدة من ${name} (${email})`,
+            type: 'contact_message',
+            data: { name, email, message, url: '/content-admin/notifications' }
+        })
+
+        return { success: true, message: 'تم إرسال رسالتك بنجاح' }
+    } catch (error: any) {
+        console.error('submitContactFormAction failed:', error)
+        return { success: false, error: 'حدث خطأ أثناء حفظ الرسالة' }
+    }
 }
 
 export async function notifyAdminsAction(params: Omit<CreateNotificationParams, 'userId'>) {
@@ -211,5 +270,76 @@ export async function notifyAdminsAction(params: Omit<CreateNotificationParams, 
     } catch (error: any) {
         console.error('❌ notifyAdminsAction failed:', error)
         return { success: false, error: error.message }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Admin Contact Messages CRUD
+// -----------------------------------------------------------------------------
+
+export async function getContactMessagesAction(filters?: { isRead?: boolean }, page = 1, limit = 20) {
+    try {
+        await requireAdmin();
+        const from = (page - 1) * limit;
+
+        let query = supabaseAdmin
+            .from('contact_messages')
+            .select('*', { count: 'exact' })
+            .order('created_at', { ascending: false })
+            .range(from, from + limit - 1);
+
+        if (filters?.isRead !== undefined) {
+            query = query.eq('is_read', filters.isRead);
+        }
+
+        const { data, error, count } = await query;
+
+        if (error) throw error;
+
+        return {
+            success: true,
+            messages: data || [],
+            total: count || 0,
+            hasMore: (count || 0) > from + limit
+        };
+    } catch (error: any) {
+        console.error('getContactMessagesAction failed:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+export async function markContactMessageAsReadAction(id: string, isRead: boolean = true) {
+    try {
+        await requireAdmin();
+        const { error } = await supabaseAdmin
+            .from('contact_messages')
+            .update({ is_read: isRead })
+            .eq('id', id);
+
+        if (error) throw error;
+
+        revalidatePath('/admin/contact');
+        return { success: true };
+    } catch (error: any) {
+        console.error('markContactMessageAsReadAction failed:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+export async function deleteContactMessageAction(id: string) {
+    try {
+        await requireAdmin();
+        const { error } = await supabaseAdmin
+            .from('contact_messages')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+
+        revalidatePath('/admin/contact');
+        return { success: true };
+    } catch (error: any) {
+        console.error('deleteContactMessageAction failed:', error);
+        return { success: false, error: error.message };
     }
 }

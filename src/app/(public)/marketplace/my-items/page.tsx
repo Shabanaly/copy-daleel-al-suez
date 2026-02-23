@@ -8,9 +8,15 @@ import { SellerHeader } from '@/presentation/components/marketplace/seller/selle
 import { MarketplaceEmptyState } from '@/presentation/components/marketplace/marketplace-empty-state'
 import { MarketplaceItemCard } from '@/app/(public)/marketplace/components/marketplace-item-card'
 
-export const dynamic = 'force-dynamic'
+import { Pagination } from '@/presentation/components/shared/pagination'
 
-export default async function MyItemsPage() {
+const ITEMS_PER_PAGE = 20
+
+export default async function MyItemsPage({
+    searchParams
+}: {
+    searchParams: Promise<{ page?: string }> | { page?: string }
+}) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
@@ -18,11 +24,17 @@ export default async function MyItemsPage() {
         redirect('/login?next=/marketplace/my-items')
     }
 
+    const params = searchParams instanceof Promise ? await searchParams : searchParams
+    const currentPage = Math.max(1, parseInt(params.page || '1', 10))
+    const offset = (currentPage - 1) * ITEMS_PER_PAGE
+
     const repository = new SupabaseMarketplaceRepository(supabase)
-    const [items, profile] = await Promise.all([
-        repository.getMyItems(user.id),
+    const [{ items, count: total }, profile] = await Promise.all([
+        repository.getMyItems(user.id, ITEMS_PER_PAGE, offset),
         repository.getSellerProfile(user.id) // Reuse existing method
     ])
+
+    const totalPages = Math.ceil(total / ITEMS_PER_PAGE)
 
     const getStatusBadge = (status: string, reason?: string) => {
         switch (status) {
@@ -48,13 +60,16 @@ export default async function MyItemsPage() {
         <div className="container mx-auto px-4 py-8 min-h-[calc(100vh-200px)]">
             <SellerHeader
                 profile={profile ? { ...profile, id: user.id } : { id: user.id, full_name: user.user_metadata?.full_name || 'User', avatar_url: user.user_metadata?.avatar_url || '', created_at: user.created_at }}
-                stats={{ totalItems: items.length }}
+                stats={{ totalItems: total }}
                 isOwner={true}
                 isDashboard={true}
             />
 
             <div className="flex items-center justify-between mb-8">
-                <h2 className="text-xl font-bold">كل الإعلانات</h2>
+                <div className="flex flex-col">
+                    <h2 className="text-xl font-bold">كل الإعلانات</h2>
+                    <p className="text-xs text-muted-foreground mt-1">عرض {(offset + 1)}-{Math.min(offset + items.length, total)} من {total}</p>
+                </div>
                 <Link href="/marketplace/new" className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-xl hover:bg-primary/90 transition-colors font-medium">
                     <PlusCircle size={18} />
                     <span>إضافة إعلان</span>
@@ -137,6 +152,16 @@ export default async function MyItemsPage() {
                             />
                         </div>
                     ))}
+                </div>
+            )}
+
+            {totalPages > 1 && (
+                <div className="mt-8 border-t border-border pt-8">
+                    <Pagination
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        baseUrl="/marketplace/my-items"
+                    />
                 </div>
             )}
         </div>

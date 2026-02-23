@@ -1,7 +1,7 @@
 import { SuezEvent, EventStatus } from "../entities/suez-event";
 
 export interface IEventRepository {
-    getEvents(options?: { status?: EventStatus; limit?: number; placeId?: string }, client?: unknown): Promise<SuezEvent[]>;
+    getEvents(options?: { status?: EventStatus; limit?: number; offset?: number; placeId?: string }, client?: unknown): Promise<{ events: SuezEvent[], count: number }>;
     getEventById(id: string, client?: unknown): Promise<SuezEvent | null>;
     getEventBySlug(slug: string, client?: unknown): Promise<SuezEvent | null>;
     createEvent(event: Omit<SuezEvent, 'id' | 'createdAt' | 'updatedAt' | 'placeName'>, client?: unknown): Promise<SuezEvent>;

@@ -28,14 +28,14 @@ export class SupabaseEventRepository implements IEventRepository {
         this.supabase = client;
     }
 
-    async getEvents(options?: { status?: EventStatus; limit?: number; placeId?: string }, client?: unknown): Promise<SuezEvent[]> {
+    async getEvents(options?: { status?: EventStatus; limit?: number; offset?: number; placeId?: string }, client?: unknown): Promise<{ events: SuezEvent[], count: number }> {
         const supabaseClient = (client as import('@supabase/supabase-js').SupabaseClient) || this.supabase;
-        if (!supabaseClient) return [];
+        if (!supabaseClient) return { events: [], count: 0 };
 
         let query = supabaseClient.from('events').select(`
             id, title, slug, description, image_url, start_date, end_date, location, place_id, type, status, view_count, created_at, updated_at, display_order,
             places (name)
-        `);
+        `, { count: 'exact' });
 
         if (options?.status) {
             query = query.eq('status', options.status);
@@ -50,17 +50,20 @@ export class SupabaseEventRepository implements IEventRepository {
             query = query.eq('place_id', options.placeId);
         }
 
-        if (options?.limit) {
-            query = query.limit(options.limit);
-        }
+        const offset = options?.offset || 0;
+        const limit = options?.limit || 10;
 
-        const { data, error } = await query
+        const { data, error, count } = await query
             .order('display_order', { ascending: true })
-            .order('start_date', { ascending: true });
+            .order('start_date', { ascending: true })
+            .range(offset, offset + limit - 1);
 
         if (error) throw error;
 
-        return (data as unknown as SupabaseEventRow[]).map(row => this.mapToEntity(row));
+        return {
+            events: (data as unknown as SupabaseEventRow[]).map(row => this.mapToEntity(row)),
+            count: count || 0
+        };
     }
 
     async getEventById(id: string, client?: unknown): Promise<SuezEvent | null> {

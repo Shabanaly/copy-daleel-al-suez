@@ -9,6 +9,8 @@ import { z } from 'zod'
 import { sanitizeText, sanitizePhone, sanitizeAttributes, sanitizeImageUrls } from '@/lib/utils/sanitize'
 import { generateSmartSlug } from '@/lib/utils/slug-generator'
 import type { MarketplaceItemCondition } from '@/domain/entities/marketplace-item'
+import { ActionResult } from '@/types/actions'
+import { checkIdempotency, saveIdempotency } from '@/lib/utils/idempotency'
 
 // ═══ Server-Side Validation Schema ═══
 const itemSchema = z.object({
@@ -54,56 +56,61 @@ export async function createMarketplaceItemAction(rawData: {
     listing_type?: string
     price_type?: 'fixed' | 'negotiable' | 'contact'
     honeypot?: string
-}) {
-    // 1. Rate Limiting (Prevent spam)
-    const { user, supabase, error: authError } = await getAuthenticatedUser()
-    if (!user || authError) return { success: false, error: authError || 'غير مصرح' }
-
-    const { rateLimit } = await import('@/lib/utils/rate-limit')
-    const limiter = await rateLimit(`item_create_${user.id}`, 3, 3600000) // 3 items per hour
-
-    if (!limiter.success) {
-        return { success: false, error: 'لقد وصلت للحد الأقصى للنشر حالياً. حاول لاحقاً.' }
-    }
-
-    // 2. Honeypot check
-    if (rawData.honeypot && rawData.honeypot.length > 0) {
-        console.warn(`Honeypot triggered by user ${user.id}`)
-        return { success: false, error: 'حدث خطأ غير متوقع' }
-    }
-
-    // 1. Server-side validation
-    const parsed = itemSchema.safeParse(rawData)
-    if (!parsed.success) {
-        const firstError = parsed.error.issues[0]?.message || 'بيانات غير صحيحة'
-        return { success: false, error: firstError }
-    }
-
-    // 2. Sanitize inputs
-    const cleanData = {
-        title: sanitizeText(parsed.data.title),
-        description: sanitizeText(parsed.data.description),
-        price: parsed.data.price,
-        price_type: parsed.data.price_type,
-        category: sanitizeText(parsed.data.category),
-        condition: (parsed.data.condition ? sanitizeText(parsed.data.condition) : null) as MarketplaceItemCondition | null,
-        location: sanitizeText(parsed.data.location),
-        area_id: parsed.data.area_id || undefined,
-        seller_phone: sanitizePhone(parsed.data.seller_phone),
-        seller_whatsapp: parsed.data.seller_whatsapp ? sanitizePhone(parsed.data.seller_whatsapp) : parsed.data.seller_phone ? sanitizePhone(parsed.data.seller_phone) : undefined,
-        images: sanitizeImageUrls(parsed.data.images),
-        attributes: sanitizeAttributes({
-            ...parsed.data.attributes,
-            listing_type: parsed.data.listing_type || 'offered',
-        }),
-    }
-
-    // 3. Remove condition from attributes to prevent duplication
-    const { condition: _discardedCondition, ...cleanAttributes } = cleanData.attributes
-    cleanData.attributes = cleanAttributes
-
+}, idempotencyKey?: string): Promise<ActionResult> {
     try {
-        // 3.5 Check User Role for Auto-Approval
+        // 0. Check Idempotency
+        if (idempotencyKey) {
+            const existingResponse = await checkIdempotency(idempotencyKey);
+            if (existingResponse) return existingResponse;
+        }
+
+        // 1. Rate Limiting (Prevent spam)
+        const { user, supabase, error: authError } = await getAuthenticatedUser()
+        if (!user || authError) return { success: false, error: authError || 'غير مصرح' }
+
+        const { rateLimit } = await import('@/lib/utils/rate-limit')
+        const limiter = await rateLimit(`item_create_${user.id}`, 3, 3600000) // 3 items per hour
+
+        if (!limiter.success) {
+            return { success: false, error: 'لقد وصلت للحد الأقصى للنشر حالياً. حاول لاحقاً.' }
+        }
+
+        // 2. Honeypot check
+        if (rawData.honeypot && rawData.honeypot.length > 0) {
+            console.warn(`Honeypot triggered by user ${user.id}`)
+            return { success: false, error: 'حدث خطأ غير متوقع' }
+        }
+
+        // 3. Server-side validation
+        const parsed = itemSchema.safeParse(rawData)
+        if (!parsed.success) {
+            const firstError = parsed.error.issues[0]?.message || 'بيانات غير صحيحة'
+            return { success: false, error: firstError }
+        }
+
+        // 4. Sanitize inputs
+        const cleanData = {
+            title: sanitizeText(parsed.data.title),
+            description: sanitizeText(parsed.data.description),
+            price: parsed.data.price,
+            price_type: parsed.data.price_type,
+            category: sanitizeText(parsed.data.category),
+            condition: (parsed.data.condition ? sanitizeText(parsed.data.condition) : null) as MarketplaceItemCondition | null,
+            location: sanitizeText(parsed.data.location),
+            area_id: parsed.data.area_id || undefined,
+            seller_phone: sanitizePhone(parsed.data.seller_phone),
+            seller_whatsapp: parsed.data.seller_whatsapp ? sanitizePhone(parsed.data.seller_whatsapp) : parsed.data.seller_phone ? sanitizePhone(parsed.data.seller_phone) : undefined,
+            images: sanitizeImageUrls(parsed.data.images),
+            attributes: sanitizeAttributes({
+                ...parsed.data.attributes,
+                listing_type: parsed.data.listing_type || 'offered',
+            }),
+        }
+
+        const { condition: _discardedCondition, ...cleanAttributes } = cleanData.attributes
+        cleanData.attributes = cleanAttributes
+
+        // 5. Check User Role for Auto-Approval
         const { data: profile } = await supabase
             .from('profiles')
             .select('role')
@@ -113,19 +120,26 @@ export async function createMarketplaceItemAction(rawData: {
         const isAdmin = profile && ['admin', 'super_admin'].includes(profile.role)
         const initialStatus = isAdmin ? 'active' : 'pending'
 
-        // 4. Generate slug
+        // 6. Generate slug
         const slug = await generateSmartSlug(cleanData.title)
 
-        // 5. Use repository to create
+        // 7. Use repository to create
         const repository = new SupabaseMarketplaceRepository(supabase)
         const newItem = await repository.createItem({
             ...cleanData,
-            seller_id: user.id, // Explicitly pass seller_id
+            seller_id: user.id,
             slug,
             status: initialStatus,
         })
 
-        // 6. Notify Admins (Only if NOT an admin)
+        const finalResponse = { success: true, message: 'تم حفظ الإعلان بنجاح', data: { slug, status: initialStatus } };
+
+        // 8. Save Idempotency
+        if (idempotencyKey) {
+            await saveIdempotency(idempotencyKey, finalResponse, user.id);
+        }
+
+        // 9. Notify Admins (Only if NOT an admin)
         if (!isAdmin) {
             const { notifyAdminsAction } = await import('./notifications.actions')
             await notifyAdminsAction({
@@ -134,12 +148,10 @@ export async function createMarketplaceItemAction(rawData: {
                 type: 'system_alert',
                 data: { itemId: newItem?.id || 'unknown', slug, url: '/content-admin/marketplace' }
             })
-        } else {
-            // Notification skipped for admin-posted items as they're auto-approved.
         }
 
         revalidateMarketplace()
-        return { success: true, error: null, slug, status: initialStatus }
+        return finalResponse;
     } catch (err: any) {
         console.error('Error creating marketplace item:', err)
         return { success: false, error: err.message || 'حدث خطأ أثناء حفظ الإعلان' }
@@ -283,11 +295,19 @@ export async function getSellerProfileAction(sellerId: string) {
     return await repository.getSellerProfile(sellerId)
 }
 
-export const getSellerItemsAction = reactCache(async (sellerId: string) => {
+export const getSellerItemsAction = reactCache(async (sellerId: string, limit: number = 20, offset: number = 0) => {
     const supabase = await createReadOnlyClient()
     const repository = new SupabaseMarketplaceRepository(supabase)
-    return await repository.getSellerItems(sellerId)
+    return await repository.getSellerItems(sellerId, limit, offset)
 })
+
+export async function getMyItemsAction(limit: number = 20, offset: number = 0) {
+    const { user, supabase, error: authError } = await getAuthenticatedUser()
+    if (!user || authError) throw new Error(authError || 'Unauthorized')
+
+    const repository = new SupabaseMarketplaceRepository(supabase)
+    return await repository.getMyItems(user.id, limit, offset)
+}
 
 // --- Cached Data Wrappers ---
 

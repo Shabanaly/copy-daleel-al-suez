@@ -9,9 +9,11 @@ interface WeatherData {
     city: string
     description: string
     icon: string
+    isFallback?: boolean
 }
 
 interface PrayerTimes {
+    isFallback?: boolean
     nextPrayer: {
         name: string
         time: string
@@ -99,8 +101,8 @@ export function UnifiedInfoStrip({ weather, prayerTimes }: UnifiedInfoStripProps
                     <>
                         <div className="flex items-center gap-2">
                             <WeatherIcon size={20} className="text-blue-500 dark:text-blue-400" />
-                            <div className="flex items-center gap-1 md:gap-2">
-                                <span className="font-bold text-base md:text-lg text-foreground">{weather.temp}°</span>
+                            <div className="flex items-center gap-1 md:gap-2" title={weather.isFallback ? 'بيانات تقديرية' : 'بيانات حية'}>
+                                <span className="font-bold text-base md:text-lg text-foreground">{weather.temp}°{weather.isFallback && '*'}</span>
                                 <span className="text-xs md:text-sm text-muted-foreground hidden sm:inline">{weather.city}</span>
                             </div>
                         </div>
@@ -127,8 +129,8 @@ export function UnifiedInfoStrip({ weather, prayerTimes }: UnifiedInfoStripProps
                             className="flex items-center gap-2 overflow-hidden hover:opacity-80 transition-opacity"
                         >
                             <span className="text-base md:text-lg shrink-0">🕌</span>
-                            <div className="flex flex-col md:flex-row md:items-center md:gap-2 overflow-hidden">
-                                <span className="font-bold text-sm md:text-base text-foreground truncate">{prayerTimes.nextPrayer.name} ({convertTo12Hour(prayerTimes.nextPrayer.time)})</span>
+                            <div className="flex flex-col md:flex-row md:items-center md:gap-2 overflow-hidden" title={prayerTimes.isFallback ? 'أوقات تقريبية' : 'أوقات دقيقة'}>
+                                <span className="font-bold text-sm md:text-base text-foreground truncate">{prayerTimes.nextPrayer.name}{prayerTimes.isFallback && '*'} ({convertTo12Hour(prayerTimes.nextPrayer.time)})</span>
                                 {mounted ? (
                                     <span className="text-[10px] md:text-sm text-muted-foreground whitespace-nowrap">{getRemainingTime()}</span>
                                 ) : (

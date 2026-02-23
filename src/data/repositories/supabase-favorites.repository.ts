@@ -46,28 +46,25 @@ export class SupabaseFavoritesRepository implements IFavoritesRepository {
         return !!data;
     }
 
-    async getUserFavorites(userId: string, client?: unknown): Promise<Place[]> {
+    async getUserFavorites(userId: string, client?: unknown): Promise<{ id: string; placeId: string; place: Place | null; createdAt: string }[]> {
         const supabase = (client as SupabaseClient) || this.supabase;
         if (!supabase) return [];
 
         const { data, error } = await supabase
             .from('favorites')
-            .select('place_id, places(*)') // Join with places table
+            .select('id, place_id, created_at, places(*)')
             .eq('user_id', userId)
             .is('marketplace_item_id', null)
             .order('created_at', { ascending: false });
 
         if (error) throw new Error(error.message);
 
-        interface FavoriteWithPlace {
-            place_id: string;
-            places: any;
-        }
-
-        const favorites = data as unknown as FavoriteWithPlace[];
-        return favorites
-            .filter(item => item.places)
-            .map((item) => this.mapPlaceToEntity(item.places));
+        return (data as any[]).map(item => ({
+            id: item.id,
+            placeId: item.place_id,
+            place: item.places ? this.mapPlaceToEntity(item.places) : null,
+            createdAt: item.created_at
+        }));
     }
 
     // --- Marketplace Ads ---
@@ -110,28 +107,25 @@ export class SupabaseFavoritesRepository implements IFavoritesRepository {
         return !!data;
     }
 
-    async getUserFavoriteAds(userId: string, client?: unknown): Promise<MarketplaceItem[]> {
+    async getUserFavoriteAds(userId: string, client?: unknown): Promise<{ id: string; itemId: string; item: MarketplaceItem | null; createdAt: string }[]> {
         const supabase = (client as SupabaseClient) || this.supabase;
         if (!supabase) return [];
 
         const { data, error } = await supabase
             .from('favorites')
-            .select('marketplace_item_id, marketplace_items(*)')
+            .select('id, marketplace_item_id, created_at, marketplace_items(*)')
             .eq('user_id', userId)
             .is('place_id', null)
             .order('created_at', { ascending: false });
 
         if (error) throw new Error(error.message);
 
-        interface FavoriteWithAd {
-            marketplace_item_id: string;
-            marketplace_items: any;
-        }
-
-        const favorites = data as unknown as FavoriteWithAd[];
-        return favorites
-            .filter(item => item.marketplace_items)
-            .map((item) => this.mapAdToEntity(item.marketplace_items));
+        return (data as any[]).map(item => ({
+            id: item.id,
+            itemId: item.marketplace_item_id,
+            item: item.marketplace_items ? this.mapAdToEntity(item.marketplace_items) : null,
+            createdAt: item.created_at
+        }));
     }
 
     // --- Mapping Logic ---

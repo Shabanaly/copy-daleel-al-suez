@@ -2,6 +2,8 @@ import { QuestionDetailView } from "@/presentation/features/community/question-d
 import { Metadata } from "next";
 import { getQuestionByIdAction, getAnswersAction } from "@/actions/community.actions";
 
+export const revalidate = 300; // 5 minutes
+
 type Props = {
     params: Promise<{ id: string }>
 }

@@ -1,18 +1,27 @@
-import { getActiveEventsUseCase } from '@/di/modules'
+import { getEventsAction } from '@/actions/events.actions'
 import { EventCard } from '@/presentation/features/events/event-card'
 import { FeaturedEventsCarousel } from '@/presentation/features/events/featured-events-carousel'
+import { Pagination } from '@/presentation/components/shared/pagination'
 import { Calendar } from 'lucide-react'
 import { isPast, isFuture } from 'date-fns'
 
 export const revalidate = 900; // 15 mins
 
-import { createReadOnlyClient } from '@/lib/supabase/server'
+interface EventsPageProps {
+    searchParams: Promise<{ page?: string }>
+}
 
-export default async function EventsPage() {
-    const supabase = await createReadOnlyClient()
-    const events = await getActiveEventsUseCase.execute(undefined, supabase)
+export default async function EventsPage({ searchParams }: EventsPageProps) {
+    const { page: pageParam } = await searchParams
+    const page = parseInt(pageParam || '1')
+    const limit = 12
+    const offset = (page - 1) * limit
+
+    const { events, count } = await getEventsAction(limit, offset)
 
     // Filter live events (started but not ended) for carousel
+    // Note: In a real scenario, we might want to fetch all live events separately 
+    // but for now we filter from the current page.
     const liveEvents = events.filter(event =>
         isPast(new Date(event.startDate)) && isFuture(new Date(event.endDate))
     )
@@ -21,6 +30,8 @@ export default async function EventsPage() {
     const upcomingEvents = events.filter(event =>
         isFuture(new Date(event.startDate))
     )
+
+    const totalPages = Math.ceil(count / limit)
 
     return (
         <main className="min-h-screen bg-background pb-20 pt-24 px-4">
@@ -66,6 +77,16 @@ export default async function EventsPage() {
                                 <EventCard key={event.id} event={event} />
                             ))}
                         </div>
+
+                        {totalPages > 1 && (
+                            <div className="mt-12 flex justify-center">
+                                <Pagination
+                                    currentPage={page}
+                                    totalPages={totalPages}
+                                    baseUrl="/events"
+                                />
+                            </div>
+                        )}
                     </>
                 ) : liveEvents.length > 0 ? (
                     <div className="text-center py-10">

@@ -8,28 +8,35 @@ interface WeatherData {
     description: string
     icon: string
     city: string
+    isFallback?: boolean
 }
 
 export async function getWeatherData(): Promise<WeatherData | null> {
+    const getFallback = (): WeatherData => {
+        const hour = new Date().getHours()
+        const isNight = hour < 6 || hour > 18
+        return {
+            temp: isNight ? 22 : 28,
+            feels_like: isNight ? 23 : 30,
+            humidity: 60,
+            description: isNight ? 'صافي (ليلاً)' : 'صافي',
+            icon: isNight ? '01n' : '01d',
+            city: 'السويس',
+            isFallback: true
+        }
+    }
+
     try {
         const API_KEY = process.env.OPENWEATHER_API_KEY
 
-        // If no API key, return mock data for development
         if (!API_KEY) {
-            console.warn('OpenWeather API key not found, using mock data')
-            return {
-                temp: 28,
-                feels_like: 30,
-                humidity: 65,
-                description: 'صافي',
-                icon: '01d',
-                city: 'السويس'
-            }
+            console.warn('OpenWeather API key not found, using fallback data')
+            return getFallback()
         }
 
         const response = await fetch(
             `https://api.openweathermap.org/data/2.5/weather?q=Suez,EG&units=metric&lang=ar&appid=${API_KEY}`,
-            { next: { revalidate: 1800 } } // Cache for 30 minutes
+            { next: { revalidate: 1800 } }
         )
 
         if (!response.ok) {
@@ -44,18 +51,11 @@ export async function getWeatherData(): Promise<WeatherData | null> {
             humidity: data.main.humidity,
             description: data.weather[0].description,
             icon: data.weather[0].icon,
-            city: 'السويس'
+            city: 'السويس',
+            isFallback: false
         }
     } catch (error) {
         console.error('Error fetching weather:', error)
-        // Return mock data as fallback
-        return {
-            temp: 28,
-            feels_like: 30,
-            humidity: 65,
-            description: 'صافي',
-            icon: '01d',
-            city: 'السويس'
-        }
+        return getFallback()
     }
 }

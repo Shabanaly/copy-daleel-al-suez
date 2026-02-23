@@ -161,19 +161,19 @@ export function MarketplaceItemForm({ initialData, categoryConfig, onSuccess }: 
             if (initialData) {
                 // Update via Server Action (validates + sanitizes server-side)
                 result = await updateMarketplaceItemAction(initialData.id, itemData);
-                if (!result.success) throw new Error(result.error || 'حدث خطأ');
+                if (!result.success) throw new Error(result.error || result.message || 'حدث خطأ');
                 toast.success('تم تحديث الإعلان بنجاح');
             } else {
                 // Create via Server Action (validates + sanitizes + generates slug server-side)
                 result = await createMarketplaceItemAction(itemData);
-                if (!result.success) throw new Error(result.error || 'حدث خطأ');
-                createdSlug = result.slug;
+                if (!result.success) throw new Error(result.error || result.message || 'حدث خطأ');
+                createdSlug = result.data?.slug;
                 toast.success('تم إضافة الإعلان بنجاح');
             }
 
             if (onSuccess) onSuccess();
             else if (!initialData && createdSlug) {
-                const status = (result as any).status || 'pending';
+                const status = result.data?.status || 'pending';
                 router.push(`/marketplace/success?slug=${createdSlug}&status=${status}`);
             }
             else router.push('/marketplace');
