@@ -13,7 +13,8 @@ import {
     updatePlaceStatusAction,
     deletePlaceAction,
     bulkUpdatePlacesStatusAction,
-    bulkDeletePlacesAction
+    bulkDeletePlacesAction,
+    transferPlaceOwnershipAction
 } from '@/actions/admin-places.actions';
 import { Place } from '@/domain/entities/place';
 import Image from 'next/image';
@@ -33,6 +34,7 @@ export function PlacesManagement({ initialPlaces, categories }: PlacesManagement
     const [categoryFilter, setCategoryFilter] = useState('all');
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [expandedPlaceId, setExpandedPlaceId] = useState<string | null>(null);
+    const [ownershipInput, setOwnershipInput] = useState<Record<string, string>>({});
 
     // Dialog state
     const [confirmOpen, setConfirmOpen] = useState(false);
@@ -137,6 +139,30 @@ export function PlacesManagement({ initialPlaces, categories }: PlacesManagement
         } else {
             setSelectedIds(filteredPlaces.map(p => p.id));
         }
+    };
+
+    const handleTransferOwnership = (placeId: string, currentOwner?: string) => {
+        const newOwnerId = ownershipInput[placeId]?.trim();
+        if (!newOwnerId) {
+            toast.error('يرجى إدخال معرف المستخدم الجديد أولاً');
+            return;
+        }
+
+        setConfirmConfig({
+            title: 'نقل ملكية المكان',
+            description: `هل أنت متأكد من نقل ملكية هذا المكان إلى المستخدم بالمعرف: ${newOwnerId}؟`,
+            variant: 'warning',
+            onConfirm: async () => {
+                const result = await transferPlaceOwnershipAction(placeId, newOwnerId);
+                if (result.success) {
+                    toast.success(result.message);
+                    router.refresh();
+                } else {
+                    toast.error(result.message);
+                }
+            }
+        });
+        setConfirmOpen(true);
     };
 
     return (
@@ -361,6 +387,34 @@ export function PlacesManagement({ initialPlaces, categories }: PlacesManagement
                                                     <Edit size={16} />
                                                     تعديل البيانات
                                                 </Link>
+                                            </div>
+
+                                            <div className="mt-4 space-y-2 bg-muted/40 border border-border/60 rounded-xl p-3">
+                                                <h4 className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">
+                                                    نقل الملكية (اختياري)
+                                                </h4>
+                                                <p className="text-[10px] text-muted-foreground mb-2">
+                                                    يمكن ربط هذا المكان بمستخدم محدد عن طريق إدخال معرف المستخدم (User ID). هذا لا يغير الرتبة، فقط يربط المكان بحسابه في لوحة أنشطته.
+                                                </p>
+                                                <div className="flex flex-col sm:flex-row gap-2">
+                                                    <input
+                                                        type="text"
+                                                        value={ownershipInput[place.id] ?? ''}
+                                                        onChange={(e) =>
+                                                            setOwnershipInput(prev => ({ ...prev, [place.id]: e.target.value }))
+                                                        }
+                                                        placeholder={place.ownerId || 'معرف المستخدم الجديد (UUID)'}
+                                                        className="flex-1 px-3 py-2 bg-background border border-border rounded-lg text-[11px] font-mono outline-none focus:ring-1 focus:ring-primary"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleTransferOwnership(place.id, place.ownerId)}
+                                                        disabled={isPending}
+                                                        className="px-3 py-2 bg-primary text-primary-foreground rounded-lg text-[11px] font-black hover:brightness-110 disabled:opacity-50"
+                                                    >
+                                                        حفظ المالك
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

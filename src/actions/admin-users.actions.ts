@@ -50,8 +50,9 @@ export async function getUsersAction(params?: {
 
 /**
  * تحديث دور المستخدم
+ * ملاحظة: لا توجد رتبة خاصة لمالك النشاط؛ المالك مستخدم عادي مرتبط بالأماكن عبر owner_id/created_by.
  */
-export async function updateUserRoleAction(userId: string, newRole: 'user' | 'business_owner' | 'admin' | 'super_admin') {
+export async function updateUserRoleAction(userId: string, newRole: 'user' | 'admin' | 'super_admin') {
     try {
         const { user: adminUser, supabase, profile: adminProfile } = await requireAdmin()
 

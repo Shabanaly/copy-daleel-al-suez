@@ -25,7 +25,6 @@ interface Props {
 
 const ROLES = [
     { value: 'user', label: 'مستخدم', icon: User, color: 'text-gray-500', description: 'مستخدم عادي يمكنه التصفح والتعليق' },
-    { value: 'business_owner', label: 'صاحب عمل', icon: Shield, color: 'text-blue-500', description: 'يمكنه إدارة الأماكن والمنتجات الخاصة به' },
     { value: 'admin', label: 'مشرف محتوى', icon: ShieldCheck, color: 'text-purple-500', description: 'صلاحية كاملة لإدارة المحتوى والأماكن' },
     { value: 'super_admin', label: 'مدير نظام', icon: UserCog, color: 'text-rose-500', description: 'صلاحية كاملة لكل وظائف النظام والإعدادات' },
 ]
@@ -114,7 +113,7 @@ export function UsersList({ initialUsers, totalCount, currentPage, totalPages }:
                 </div>
 
                 <div className="flex items-center gap-2 bg-muted/20 p-1 rounded-xl border border-border">
-                    {['all', 'user', 'business_owner', 'admin'].map(r => (
+                    {['all', 'user', 'admin', 'super_admin'].map(r => (
                         <button
                             key={r}
                             onClick={() => {

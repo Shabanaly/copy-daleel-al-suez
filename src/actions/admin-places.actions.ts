@@ -43,6 +43,40 @@ export async function getAdminPlacesAction(filters?: {
     }
 }
 
+export async function transferPlaceOwnershipAction(placeId: string, newOwnerId: string) {
+    try {
+        const { user: adminUser } = await requireAdmin()
+        const supabase = await createClient()
+
+        // تحديث مالك المكان
+        const { error } = await supabase
+            .from('places')
+            .update({ owner_id: newOwnerId, updated_at: new Date().toISOString() })
+            .eq('id', placeId)
+
+        if (error) throw error
+
+        // سجل العملية في audit_logs (اختياري لكن مفيد للتتبع)
+        try {
+            await supabase.from('audit_logs').insert({
+                user_id: adminUser.id,
+                action: 'place.transfer_ownership',
+                table_name: 'places',
+                record_id: placeId,
+                new_data: { owner_id: newOwnerId }
+            })
+        } catch (e) {
+            console.warn('Audit log failed for transferPlaceOwnershipAction')
+        }
+
+        revalidatePath('/content-admin/places')
+        return { success: true, message: 'تم نقل ملكية المكان بنجاح' }
+    } catch (error) {
+        console.error('Error transferring place ownership:', error)
+        return { success: false, message: 'فشل في نقل ملكية المكان' }
+    }
+}
+
 export async function updatePlaceStatusAction(id: string, status: 'active' | 'pending' | 'inactive') {
     try {
         await requireAdmin()
