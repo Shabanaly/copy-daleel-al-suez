@@ -132,7 +132,7 @@ export function PlaceCard({
                     <div className="flex justify-between items-start gap-1 mb-1.5">
                         <h3 className={cn(
                             "font-bold text-foreground group-hover:text-primary transition-colors line-clamp-1 flex-1",
-                            isCompact ? "text-sm" : "text-base md:text-lg"
+                            isCompact ? "text-sm md:text-base" : "text-lg md:text-xl"
                         )}>
                             {place.name}
                         </h3>

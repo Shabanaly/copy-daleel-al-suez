@@ -42,7 +42,7 @@ export function CategoryCard({ category, placesCount = 0 }: CategoryCardProps) {
 
                 {/* Info */}
                 <div className="space-y-2">
-                    <h3 className="text-2xl font-black text-foreground group-hover:text-primary transition-colors">
+                    <h3 className="text-3xl md:text-4xl font-black text-foreground group-hover:text-primary transition-colors">
                         {category.name}
                     </h3>
                     <div className="flex items-center justify-center gap-2">
@@ -56,7 +56,7 @@ export function CategoryCard({ category, placesCount = 0 }: CategoryCardProps) {
                     </div>
                 </div>
 
-                <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed h-10">
+                <p className="text-base md:text-lg text-muted-foreground line-clamp-2 leading-relaxed h-10">
                     {category.description || `استكشف أفضل ${category.name} في مدينة السويس`}
                 </p>
 

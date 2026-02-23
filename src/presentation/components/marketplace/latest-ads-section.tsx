@@ -65,27 +65,23 @@ export function LatestAdsSection({ initialItems = [], initialSortType = 'random'
     const header = getSectionHeader();
 
     return (
-        <section className="py-6 bg-muted/30">
-            <div className="container mx-auto px-4">
-                {/* Content - Horizontal Scroll Container */}
-                <HorizontalScroll
-                    title={header.title}
-                    subtitle={header.subtitle}
-                    viewAllLink="/marketplace"
-                >
-                    {loading ? (
-                        [...Array(4)].map((_, i) => (
-                            <div key={i} className="w-full">
-                                <MarketplaceCardSkeleton />
-                            </div>
-                        ))
-                    ) : (
-                        items.map((item) => (
-                            <MarketplaceItemCard key={item.id} item={item} isCompact={true} />
-                        ))
-                    )}
-                </HorizontalScroll>
-            </div>
-        </section>
+        <HorizontalScroll
+            className="bg-muted/30"
+            title={header.title}
+            subtitle={header.subtitle}
+            viewAllLink="/marketplace"
+        >
+            {loading ? (
+                [...Array(4)].map((_, i) => (
+                    <div key={i} className="w-full">
+                        <MarketplaceCardSkeleton />
+                    </div>
+                ))
+            ) : (
+                items.map((item) => (
+                    <MarketplaceItemCard key={item.id} item={item} isCompact={true} />
+                ))
+            )}
+        </HorizontalScroll>
     )
 }
