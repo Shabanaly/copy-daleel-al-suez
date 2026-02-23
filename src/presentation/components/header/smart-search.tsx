@@ -104,7 +104,7 @@ export function SmartSearch({ mobile = false }: { mobile?: boolean }) {
                                             value={query}
                                             onChange={(e) => setQuery(e.target.value)}
                                             placeholder="ابحث عن أماكن، فعاليات، أخبار..."
-                                            className="flex-1 bg-transparent border-none outline-none text-lg placeholder:text-muted-foreground/50"
+                                            className="flex-1 bg-transparent border-none outline-none text-lg placeholder:text-muted-foreground/50 py-2 px-1 focus:ring-0"
                                             autoFocus
                                         />
                                         <button
@@ -160,7 +160,7 @@ export function SmartSearch({ mobile = false }: { mobile?: boolean }) {
     // --- Desktop Dropdown View ---
     return (
         <div ref={containerRef} className="relative w-full max-w-xl mx-auto hidden md:block group">
-            <div className="relative flex items-center bg-muted/50 border border-border focus-within:border-primary/50 focus-within:bg-background focus-within:shadow-lg focus-within:ring-2 focus-within:ring-primary/20 rounded-full transition-all duration-300 overflow-hidden">
+            <div className="relative flex items-center bg-muted/40 border border-border/60 hover:border-primary/30 hover:bg-muted/60 focus-within:border-primary/50 focus-within:bg-background focus-within:shadow-lg focus-within:ring-2 focus-within:ring-primary/10 rounded-full transition-all duration-300 overflow-hidden">
                 <Search className="mr-4 ml-2 text-muted-foreground group-focus-within:text-primary transition-colors" size={20} />
 
                 <input

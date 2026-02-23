@@ -235,9 +235,9 @@ export function MarketplaceSearchBar({ initialMobileFocus = false, onClose }: { 
     return (
         <div ref={containerRef} className="relative w-full max-w-lg mx-auto">
             <form onSubmit={handleSearchSubmit} className={cn(
-                "relative flex items-center bg-muted/50 border border-border/60 rounded-full transition-all duration-300 z-[60]",
+                "relative flex items-center bg-muted/40 border border-border/60 rounded-full transition-all duration-300 z-[60]",
                 "focus-within:bg-background focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10",
-                "hover:bg-muted/80 hover:border-primary/30"
+                "hover:bg-muted/60 hover:border-primary/30"
             )}>
                 {/* Back Button (Mobile) */}
                 {initialMobileFocus && (

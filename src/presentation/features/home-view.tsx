@@ -166,7 +166,7 @@ export function HomeView({
 
                     {/* Smart Search Bar */}
                     <div className="max-w-2xl mx-auto w-full mb-6 relative">
-                        <div className="bg-white/10 dark:bg-black/20 backdrop-blur-xl p-1.5 rounded-full border border-white/20 dark:border-white/10 shadow-2xl relative z-[60]">
+                        <div className="bg-white/10 dark:bg-black/20 backdrop-blur-xl p-1.5 rounded-full border border-white/20 dark:border-white/10 shadow-2xl relative z-[60] transition-all duration-300 hover:border-white/40 focus-within:ring-4 focus-within:ring-white/20 focus-within:border-white/50">
                             <HeaderSearchBar containerClassName="max-w-none" variant="ghost" />
                         </div>
                     </div>
@@ -279,10 +279,10 @@ function SuggestionButton({ icon, label, href, isPrimary = false, isDark = false
             className={cn(
                 "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all duration-300",
                 isPrimary
-                    ? "bg-yellow-300 text-primary-foreground hover:brightness-110 shadow-lg shadow-yellow-300/20"
+                    ? "bg-yellow-300 text-primary-foreground hover:brightness-110 hover:scale-105 active:scale-95 shadow-lg shadow-yellow-300/20"
                     : isDark
-                        ? "bg-muted text-foreground hover:bg-muted/80 border border-border"
-                        : "bg-white/10 text-white hover:bg-white/20 backdrop-blur-md border border-white/10"
+                        ? "bg-muted text-foreground hover:bg-muted/80 hover:border-primary/30 border border-border"
+                        : "bg-white/10 text-white hover:bg-white/20 hover:border-white/40 backdrop-blur-md border border-white/10"
             )}
         >
             {icon}

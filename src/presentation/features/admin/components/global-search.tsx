@@ -64,7 +64,7 @@ export function GlobalAdminSearch() {
                     }}
                     onFocus={() => setIsOpen(true)}
                     placeholder="بحث سريع... (Ctrl+K)"
-                    className="w-full bg-muted/50 border border-border rounded-xl py-2 px-10 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:bg-background transition-all"
+                    className="w-full bg-muted/30 border border-border rounded-xl py-2 px-10 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:bg-background focus:border-primary/40 hover:border-primary/20 transition-all duration-300"
                 />
                 {query && (
                     <button

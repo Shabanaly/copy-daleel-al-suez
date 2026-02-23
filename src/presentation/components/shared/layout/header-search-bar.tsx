@@ -260,7 +260,7 @@ export function HeaderSearchBar({
         <div ref={containerRef} className={cn("relative w-full max-w-lg mx-auto", containerClassName)}>
             <form onSubmit={handleSearchSubmit} className={cn(
                 "w-full max-w-full box-border relative flex items-center transition-all duration-300 rounded-full",
-                variant === 'default' && "bg-muted/50 border border-border/60 focus-within:bg-background focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10 hover:bg-muted/80 hover:border-primary/30",
+                variant === 'default' && "bg-muted/40 border border-border/60 focus-within:bg-background focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10 hover:bg-muted/60 hover:border-primary/30",
                 variant === 'ghost' && "bg-transparent border-none focus-within:bg-transparent",
                 showAreaMenu ? "z-[120]" : "z-[60]"
             )}>

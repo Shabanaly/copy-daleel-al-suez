@@ -95,7 +95,7 @@ export function PlacesFilters({ categories, areas, hideCategories = false, resul
                                 value={localSearch}
                                 onChange={(e) => setLocalSearch(e.target.value)}
                                 placeholder="ابحث..."
-                                className="w-full bg-muted/30 border border-transparent focus:border-primary/20 focus:bg-background h-12 pr-11 pl-4 rounded-[1.25rem] text-sm font-bold transition-all outline-none"
+                                className="w-full bg-muted/40 border border-border/40 group-hover:border-primary/30 focus:border-primary/50 focus:bg-background focus:ring-4 focus:ring-primary/10 h-12 pr-11 pl-4 rounded-[1.25rem] text-sm font-bold transition-all duration-300 outline-none"
                             />
                         </div>
 
