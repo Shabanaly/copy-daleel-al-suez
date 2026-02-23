@@ -61,19 +61,15 @@ export async function submitQuestionAction(data: {
     const repository = new SupabaseCommunityRepository(supabase)
     try {
         const content = sanitizeText(data.content)
-        if (content.length < 10) throw new Error('السؤال قصير جداً، يجب أن يكون 10 أحرف على الأقل')
-        if (content.length > 2000) throw new Error('السؤال طويل جداً، الحد الأقصى 2000 حرف')
+        if (content.length < 10) return { success: false, error: 'السؤال قصير جداً، يجب أن يكون 10 أحرف على الأقل' }
+        if (content.length > 2000) return { success: false, error: 'السؤال طويل جداً، الحد الأقصى 2000 حرف' }
 
         const question = await repository.createQuestion({ ...data, content }, user.id)
         revalidatePath('/community')
         return { success: true, question }
     } catch (error) {
         console.error('submitQuestionAction error:', error)
-        // Preserve validation error messages for user feedback
-        if (error instanceof Error && (error.message.includes('قصير') || error.message.includes('طويل') || error.message.includes('يجب'))) {
-            throw error
-        }
-        throw new Error('فشل طرح السؤال')
+        return { success: false, error: error instanceof Error ? error.message : 'فشل طرح السؤال' }
     }
 }
 
@@ -103,8 +99,8 @@ export async function submitAnswerAction(questionId: string, body: string) {
     const repository = new SupabaseCommunityRepository(supabase)
     try {
         const content = sanitizeText(body)
-        if (content.length < 5) throw new Error('الإجابة قصيرة جداً، يجب أن تكون 5 أحرف على الأقل')
-        if (content.length > 5000) throw new Error('الإجابة طويلة جداً، الحد الأقصى 5000 حرف')
+        if (content.length < 5) return { success: false, error: 'الإجابة قصيرة جداً، يجب أن تكون 5 أحرف على الأقل' }
+        if (content.length > 5000) return { success: false, error: 'الإجابة طويلة جداً، الحد الأقصى 5000 حرف' }
 
         const answer = await repository.createAnswer(questionId, content, user.id)
 
@@ -128,11 +124,7 @@ export async function submitAnswerAction(questionId: string, body: string) {
         return { success: true, answer }
     } catch (error) {
         console.error('submitAnswerAction error:', error)
-        // Preserve validation error messages for user feedback
-        if (error instanceof Error && (error.message.includes('قصير') || error.message.includes('طويل') || error.message.includes('يجب'))) {
-            throw error
-        }
-        throw new Error('فشل إضافة الإجابة')
+        return { success: false, error: error instanceof Error ? error.message : 'فشل إضافة الإجابة' }
     }
 }
 

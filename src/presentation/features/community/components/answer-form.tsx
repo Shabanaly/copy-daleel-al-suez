@@ -22,10 +22,14 @@ export function AnswerForm({ questionId, onSuccess }: AnswerFormProps) {
 
         setLoading(true)
         try {
-            await submitAnswerAction(questionId, content)
-            toast.success("تمت إضافة إجابتك")
-            setContent("")
-            onSuccess()
+            const result = await submitAnswerAction(questionId, content)
+            if (result.success) {
+                toast.success("تمت إضافة إجابتك")
+                setContent("")
+                onSuccess()
+            } else {
+                toast.error(result.error || "فشل إضافة الإجابة")
+            }
         } catch (error) {
             toast.error("فشل إضافة الإجابة")
         } finally {

@@ -41,6 +41,8 @@ export function AskQuestionModal({ isOpen, onClose }: AskQuestionModalProps) {
                 toast.success("تم نشر سؤالك بنجاح")
                 onClose()
                 setContent("")
+            } else {
+                toast.error(result.error || "فشل نشر السؤال")
             }
         } catch (error) {
             toast.error(error instanceof Error ? error.message : "فشل نشر السؤال")

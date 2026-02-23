@@ -74,7 +74,7 @@ export default function RootLayout({
             <VisitTracker />
             {children}
             <SpeedInsights />
-            <Toaster />
+            <Toaster position="top-center" />
           </ThemeProvider>
         </AreaProvider>
       </body>

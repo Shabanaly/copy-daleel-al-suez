@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { CommunityQuestion } from "@/domain/entities/community-qa"
 import { getQuestionsAction } from "@/actions/community.actions"
 import { QuestionCard } from "./components/question-card"
@@ -9,16 +10,22 @@ import { Input } from "@/presentation/ui/input"
 import { Button } from "@/presentation/ui/button"
 import { Search, Plus, MessageSquare, Loader2, Info } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
+import { createClient } from "@/lib/supabase/client"
+import { toast } from "sonner"
+import Link from "next/link"
 
 interface CommunityViewProps {
     initialQuestions?: CommunityQuestion[];
 }
 
 export function CommunityView({ initialQuestions = [] }: CommunityViewProps) {
+    const router = useRouter()
     const [questions, setQuestions] = useState<CommunityQuestion[]>(initialQuestions)
     const [loading, setLoading] = useState(initialQuestions.length === 0)
     const [searchQuery, setSearchQuery] = useState("")
     const [isAskModalOpen, setIsAskModalOpen] = useState(false)
+    const [user, setUser] = useState<any>(null)
+    const supabase = createClient()
 
     const fetchQuestions = async () => {
         setLoading(true)
@@ -36,6 +43,7 @@ export function CommunityView({ initialQuestions = [] }: CommunityViewProps) {
 
     useEffect(() => {
         fetchQuestions()
+        supabase.auth.getUser().then(({ data }) => setUser(data.user))
     }, [])
 
     const handleSearch = (e: React.FormEvent) => {
@@ -71,13 +79,25 @@ export function CommunityView({ initialQuestions = [] }: CommunityViewProps) {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                 >
-                    <Button
-                        onClick={() => setIsAskModalOpen(true)}
-                        className="rounded-2xl h-14 px-8 font-bold text-lg gap-2 shadow-xl shadow-primary/20 w-full md:w-auto"
-                    >
-                        <Plus size={20} strokeWidth={3} />
-                        طرح سؤال جديد
-                    </Button>
+                    {user ? (
+                        <Button
+                            onClick={() => setIsAskModalOpen(true)}
+                            className="rounded-2xl h-14 px-8 font-bold text-lg gap-2 shadow-xl shadow-primary/20 w-full md:w-auto"
+                        >
+                            <Plus size={20} strokeWidth={3} />
+                            طرح سؤال جديد
+                        </Button>
+                    ) : (
+                        <Link href="/login" className="block w-full md:w-auto">
+                            <Button
+                                className="rounded-2xl h-14 px-8 font-bold text-lg gap-2 shadow-xl shadow-muted/20 w-full md:w-auto"
+                                variant="secondary"
+                            >
+                                <Plus size={20} strokeWidth={3} />
+                                سجل الدخول لتسأل
+                            </Button>
+                        </Link>
+                    )}
                 </motion.div>
             </div>
 
@@ -137,10 +157,13 @@ export function CommunityView({ initialQuestions = [] }: CommunityViewProps) {
                         </p>
                         <Button
                             variant="outline"
-                            onClick={() => setIsAskModalOpen(true)}
+                            onClick={() => {
+                                if (user) setIsAskModalOpen(true)
+                                else router.push('/login')
+                            }}
                             className="rounded-xl font-bold gap-2 px-6"
                         >
-                            ابدأ أنت الآن
+                            {user ? 'ابدأ أنت الآن' : 'سجل الدخول لتسأل'}
                             <Plus size={16} />
                         </Button>
                     </motion.div>
