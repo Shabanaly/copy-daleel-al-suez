@@ -130,7 +130,6 @@ export function ReviewsSection({
             {/* Review Form */}
             {showForm && currentUserId && (
                 <ReviewForm
-                    placeId={placeId}
                     placeName={placeName}
                     existingReview={editingReview ? {
                         rating: editingReview.rating,
