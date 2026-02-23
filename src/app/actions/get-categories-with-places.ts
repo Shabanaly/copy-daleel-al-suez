@@ -165,7 +165,8 @@ export const getCachedActiveEventsAction = async (limit: number = 10) => {
         async (limit: number = 10) => {
             const supabase = await createReadOnlyClient();
             const { eventRepository } = await import('@/di/modules');
-            return await eventRepository.getEvents({ status: 'active', limit }, supabase);
+            const result = await eventRepository.getEvents({ status: 'active', limit }, supabase);
+            return result.events;
         },
         ['active-events-home'],
         { revalidate: 3600, tags: ['events'] }

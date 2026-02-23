@@ -5,6 +5,7 @@ export class GetLatestArticlesUseCase {
     constructor(private articleRepository: ArticleRepository) { }
 
     async execute(limit: number = 3, client?: unknown): Promise<Article[]> {
-        return await this.articleRepository.getPublished(limit, 0, client);
+        const result = await this.articleRepository.getPublished(limit, 0, client);
+        return result.articles;
     }
 }

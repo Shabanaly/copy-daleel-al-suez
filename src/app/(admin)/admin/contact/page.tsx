@@ -1,4 +1,5 @@
 import { getContactMessagesAction } from "@/actions/notifications.actions";
+export const dynamic = 'force-dynamic'
 import { ContactManager } from "./contact-manager";
 import { MessageSquare } from "lucide-react";
 

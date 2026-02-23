@@ -1,10 +1,10 @@
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { ActionResult } from "@/types/actions";
 
 export async function checkIdempotency(key: string, userId?: string): Promise<ActionResult | null> {
     if (!key) return null;
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await getSupabaseAdmin()
         .from('idempotency_keys')
         .select('response')
         .eq('key', key)
@@ -25,7 +25,7 @@ export async function checkIdempotency(key: string, userId?: string): Promise<Ac
 export async function saveIdempotency(key: string, response: ActionResult, userId?: string): Promise<void> {
     if (!key) return;
 
-    const { error } = await supabaseAdmin
+    const { error } = await getSupabaseAdmin()
         .from('idempotency_keys')
         .upsert({
             key,

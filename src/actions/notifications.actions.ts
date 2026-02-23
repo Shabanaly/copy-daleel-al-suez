@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { sanitizeText } from '@/lib/utils/sanitize'
-import { supabaseAdmin } from '@/lib/supabase/admin'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { SupabaseNotificationRepository } from '@/data/repositories/supabase-notification.repository'
 import { Notification as DomainNotification } from '@/domain/entities/notification'
@@ -135,7 +135,7 @@ export async function markAllNotificationsAsReadAction() {
 
 export async function createNotificationAction(params: CreateNotificationParams) {
     try {
-        const repository = new SupabaseNotificationRepository(supabaseAdmin)
+        const repository = new SupabaseNotificationRepository(getSupabaseAdmin())
         const notification = await repository.create({
             userId: params.userId,
             title: params.title,
@@ -147,7 +147,7 @@ export async function createNotificationAction(params: CreateNotificationParams)
         // Send Email for Critical Types
         if (['status_update', 'business_claim', 'admin_alert'].includes(params.type)) {
             try {
-                const { data: userData } = await supabaseAdmin.auth.admin.getUserById(params.userId)
+                const { data: userData } = await getSupabaseAdmin().auth.admin.getUserById(params.userId)
                 if (userData?.user?.email) {
                     const { sendEmail } = await import('@/lib/email')
                     await sendEmail({
@@ -194,7 +194,7 @@ export async function submitContactFormAction(data: { name: string; email: strin
 
         // 1. Simple Rate Limit Check (max 3 messages per hour per email or IP)
         const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
-        const { count, error: countError } = await supabaseAdmin
+        const { count, error: countError } = await getSupabaseAdmin()
             .from('contact_messages')
             .select('*', { count: 'exact', head: true })
             .or(`email.eq.${email},ip_address.eq.${ip}`)
@@ -205,7 +205,7 @@ export async function submitContactFormAction(data: { name: string; email: strin
         }
 
         // 2. Store in Database
-        const { error: insertError } = await supabaseAdmin
+        const { error: insertError } = await getSupabaseAdmin()
             .from('contact_messages')
             .insert({ name, email, message, ip_address: ip })
 
@@ -229,11 +229,11 @@ export async function submitContactFormAction(data: { name: string; email: strin
 export async function notifyAdminsAction(params: Omit<CreateNotificationParams, 'userId'>) {
     try {
         const [profilesRes, adminsTableRes] = await Promise.all([
-            supabaseAdmin
+            getSupabaseAdmin()
                 .from('profiles')
                 .select('id')
                 .or('role.ilike.admin,role.ilike.super_admin'),
-            supabaseAdmin
+            getSupabaseAdmin()
                 .from('admins')
                 .select('user_id')
         ])
@@ -241,15 +241,15 @@ export async function notifyAdminsAction(params: Omit<CreateNotificationParams, 
         if (profilesRes.error) throw profilesRes.error
 
         const adminIds = new Set<string>()
-        profilesRes.data?.forEach(p => adminIds.add(p.id))
-        adminsTableRes.data?.forEach(a => adminIds.add(a.user_id))
+        profilesRes.data?.forEach((p: { id: string }) => adminIds.add(p.id))
+        adminsTableRes.data?.forEach((a: { user_id: string }) => adminIds.add(a.user_id))
 
         if (adminIds.size === 0) return { success: false, error: 'No admins found' }
 
-        const repository = new SupabaseNotificationRepository(supabaseAdmin)
+        const repository = new SupabaseNotificationRepository(getSupabaseAdmin())
 
         // We use bulk insert here which repository doesn't have yet. 
-        // For performance, we keep the bulk insert but we can wrap it or just use supabaseAdmin here as it's a specialized case.
+        // For performance, we keep the bulk insert but we can wrap it or just use getSupabaseAdmin() here as it's a specialized case.
         // Actually, let's keep the bulk insert logic here but align data keys.
         const notifications = Array.from(adminIds).map(adminId => ({
             user_id: adminId,
@@ -260,7 +260,7 @@ export async function notifyAdminsAction(params: Omit<CreateNotificationParams, 
             is_read: false
         }))
 
-        const { error: insertError } = await supabaseAdmin
+        const { error: insertError } = await getSupabaseAdmin()
             .from('notifications')
             .insert(notifications)
 
@@ -282,7 +282,7 @@ export async function getContactMessagesAction(filters?: { isRead?: boolean }, p
         await requireAdmin();
         const from = (page - 1) * limit;
 
-        let query = supabaseAdmin
+        let query = getSupabaseAdmin()
             .from('contact_messages')
             .select('*', { count: 'exact' })
             .order('created_at', { ascending: false })
@@ -311,7 +311,7 @@ export async function getContactMessagesAction(filters?: { isRead?: boolean }, p
 export async function markContactMessageAsReadAction(id: string, isRead: boolean = true) {
     try {
         await requireAdmin();
-        const { error } = await supabaseAdmin
+        const { error } = await getSupabaseAdmin()
             .from('contact_messages')
             .update({ is_read: isRead })
             .eq('id', id);
@@ -329,7 +329,7 @@ export async function markContactMessageAsReadAction(id: string, isRead: boolean
 export async function deleteContactMessageAction(id: string) {
     try {
         await requireAdmin();
-        const { error } = await supabaseAdmin
+        const { error } = await getSupabaseAdmin()
             .from('contact_messages')
             .delete()
             .eq('id', id);

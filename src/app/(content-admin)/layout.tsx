@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+export const dynamic = 'force-dynamic'
 import { requireAdmin } from '@/lib/supabase/auth-utils'
 import { AdminDesktopSidebar, AdminMobileDrawerTrigger } from '@/presentation/components/shared/layout/admin-sidebar-shell'
 import { Breadcrumbs } from '@/presentation/components/ui/Breadcrumbs'

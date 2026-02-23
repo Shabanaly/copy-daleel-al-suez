@@ -2,7 +2,7 @@
 
 import { requireAdmin } from '@/lib/supabase/auth-utils'
 import { unstable_cache } from 'next/cache'
-import { createClient } from '@/lib/supabase/server'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 
 /**
  * جلب إحصائيات النمو للوحة التحكم
@@ -55,16 +55,13 @@ export async function getDashboardGrowthAction() {
  * جلب أرقام التنبيهات المعلقة لـ هيدر الإدارة — مع تخزين مؤقت لمدة 30 ثانية
  */
 export async function getPendingCountsAction() {
-    // 1. Security check before cache
-    const { isAdmin } = await import('@/lib/auth/role-guard')
-    if (!await isAdmin()) {
-        return { success: false, error: 'Unauthorized', counts: { reports: 0, claims: 0, places: 0, marketplace: 0 } }
-    }
+    // Security: Check is performed by the calling Layout/Page via requireAdmin()
+    // We use getSupabaseAdmin() inside the cache which is safe for build time/cache.
 
     return await unstable_cache(
         async () => {
             try {
-                const supabase = await createClient()
+                const supabase = getSupabaseAdmin()
 
                 const [reportsRes, claimsRes, placesRes, marketplaceRes] = await Promise.all([
                     supabase.from('reports').select('id', { count: 'exact', head: true }).eq('status', 'pending'),

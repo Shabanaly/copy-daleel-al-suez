@@ -30,8 +30,8 @@ export function SearchResultsContent({ searchParams }: { searchParams: { [key: s
     const query = search.get('search') || ''
     const areaId = search.get('area')
 
-    // Active Tab State: 'all', 'places', 'events', 'articles'
-    const [activeTab, setActiveTab] = useState<'all' | 'places' | 'events' | 'articles'>('all')
+    // Active Tab State: 'all', 'places', 'events', 'articles', 'marketplace', 'community'
+    const [activeTab, setActiveTab] = useState<'all' | 'places' | 'events' | 'articles' | 'marketplace' | 'community'>('all')
 
     const { data: results = [], isLoading: loading } = useSWR(
         query ? ['search-results', query, areaId || 'all'] : null,
@@ -46,6 +46,8 @@ export function SearchResultsContent({ searchParams }: { searchParams: { [key: s
     const places = useMemo(() => results.filter((r: SearchResult) => r.type === 'place'), [results])
     const events = useMemo(() => results.filter((r: SearchResult) => r.type === 'event'), [results])
     const articles = useMemo(() => results.filter((r: SearchResult) => r.type === 'article'), [results])
+    const marketplace = useMemo(() => results.filter((r: SearchResult) => r.type === 'marketplace'), [results])
+    const community = useMemo(() => results.filter((r: SearchResult) => r.type === 'question'), [results])
 
     if (!query) return <EmptySearchState />
     if (loading) return <LoadingState query={query} />
@@ -82,6 +84,20 @@ export function SearchResultsContent({ searchParams }: { searchParams: { [key: s
                         isActive={activeTab === 'articles'}
                         icon={<FileText size={14} />}
                         onClick={() => setActiveTab('articles')}
+                    />
+                    <FilterButton
+                        label="سوق السويس"
+                        count={marketplace.length}
+                        isActive={activeTab === 'marketplace'}
+                        icon={<Store size={14} className="text-blue-500" />}
+                        onClick={() => setActiveTab('marketplace')}
+                    />
+                    <FilterButton
+                        label="استفسارات"
+                        count={community.length}
+                        isActive={activeTab === 'community'}
+                        icon={<HelpCircle size={14} className="text-purple-500" />}
+                        onClick={() => setActiveTab('community')}
                     />
                 </div>
             </div>
@@ -124,6 +140,30 @@ export function SearchResultsContent({ searchParams }: { searchParams: { [key: s
                                 />
                             </>
                         )}
+                        {marketplace.length > 0 && (
+                            <>
+                                <hr className="border-border/50" />
+                                <ResultSection
+                                    title="سوق السويس"
+                                    icon={<Store className="text-blue-500" />}
+                                    items={marketplace.slice(0, 4)}
+                                    onSeeAll={() => setActiveTab('marketplace')}
+                                    type="marketplace"
+                                />
+                            </>
+                        )}
+                        {community.length > 0 && (
+                            <>
+                                <hr className="border-border/50" />
+                                <ResultSection
+                                    title="استفسارات المجتمع"
+                                    icon={<HelpCircle className="text-purple-500" />}
+                                    items={community.slice(0, 4)}
+                                    onSeeAll={() => setActiveTab('community')}
+                                    type="question"
+                                />
+                            </>
+                        )}
                     </div>
                 )}
 
@@ -154,6 +194,24 @@ export function SearchResultsContent({ searchParams }: { searchParams: { [key: s
                         </div>
                     ) : (
                         <NoCategoryResultsState label="أخبار" query={query} />
+                    )
+                )}
+                {activeTab === 'marketplace' && (
+                    marketplace.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in zoom-in duration-300">
+                            {marketplace.map((item: SearchResult) => <SearchResultCard key={item.id} result={item} />)}
+                        </div>
+                    ) : (
+                        <NoCategoryResultsState label="إعلانات" query={query} />
+                    )
+                )}
+                {activeTab === 'community' && (
+                    community.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in zoom-in duration-300">
+                            {community.map((q: SearchResult) => <SearchResultCard key={q.id} result={q} />)}
+                        </div>
+                    ) : (
+                        <NoCategoryResultsState label="استفسارات" query={query} />
                     )
                 )}
             </div>
@@ -235,6 +293,7 @@ function SearchResultCard({ result, mini = false }: { result: SearchResult, mini
         'place': <Store size={14} className="text-green-600" />,
         'event': <Calendar size={14} className="text-orange-600" />,
         'article': <FileText size={14} className="text-blue-600" />,
+        'marketplace': <Store size={14} className="text-blue-600" />,
         'question': <HelpCircle size={14} className="text-purple-600" />
     }[result.type]
 

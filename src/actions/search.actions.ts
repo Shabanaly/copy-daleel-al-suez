@@ -1,6 +1,6 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createReadOnlyClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
 export interface SearchResult {
@@ -24,7 +24,7 @@ export async function searchPlacesAndEvents(query: string, areaId?: string): Pro
 
     return await unstable_cache(
         async (q: string, aid?: string) => {
-            const supabase = await createClient()
+            const supabase = await createReadOnlyClient()
 
             // 1. Try Unified Fuzzy Search RPC
             try {

@@ -4,6 +4,7 @@ import { Breadcrumbs } from '@/presentation/components/ui/Breadcrumbs'
 import { GlobalAdminSearch } from '@/presentation/features/admin/components/global-search'
 import { getPendingCountsAction } from '@/actions/admin-dashboard.actions'
 import { redirect } from 'next/navigation'
+export const dynamic = 'force-dynamic'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
     try {
