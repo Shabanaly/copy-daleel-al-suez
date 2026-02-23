@@ -12,6 +12,18 @@ export async function getAuthenticatedUser() {
         return { user: null, supabase, error: 'يجب تسجيل الدخول أولاً' }
     }
 
+    // Check if user is banned
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_banned')
+        .eq('id', user.id)
+        .single()
+
+    if (profile?.is_banned) {
+        await supabase.auth.signOut()
+        return { user: null, supabase, error: 'هذا الحساب محظور من دخول الموقع' }
+    }
+
     return { user, supabase, error: null }
 }
 

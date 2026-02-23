@@ -6,8 +6,8 @@ import { LayoutDashboard, Package, Flag, Users, ArrowRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const ADMIN_LINKS = [
-    { href: '/marketplace/admin', label: 'الإعلانات (الرئيسية)', icon: Package },
-    { href: '/marketplace/admin/reports', label: 'البلاغات', icon: Flag }
+    { href: '/content-admin/marketplace', label: 'الإعلانات', icon: Package },
+    { href: '/admin/reports', label: 'البلاغات العامة', icon: Flag }
 ]
 
 export function AdminHeader() {

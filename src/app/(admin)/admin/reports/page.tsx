@@ -3,10 +3,18 @@ import { ReportsList } from '@/presentation/features/admin/components'
 import { Flag } from 'lucide-react'
 import { requireSuperAdmin } from '@/lib/supabase/auth-utils'
 
-export default async function AdminReportsPage() {
+export default async function AdminReportsPage({
+    searchParams
+}: {
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
     await requireSuperAdmin()
+    const params = await searchParams
+
+    const status = typeof params.status === 'string' ? params.status : 'pending'
+
     const [reportsResult, logsResult] = await Promise.all([
-        getMarketplaceReportsAction(),
+        getMarketplaceReportsAction({ status }),
         getAuditLogsAction()
     ])
 

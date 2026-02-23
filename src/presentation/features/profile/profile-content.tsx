@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { User, Loader2, LogOut, Shield, AlertTriangle, LifeBuoy, Bell, Activity, Mail, Calendar, Heart, PlusCircle, Star, Settings, Building2 } from 'lucide-react'
+import { useAuthActions } from '@/presentation/hooks/use-auth-actions'
 import { User as SupabaseUser } from '@supabase/supabase-js'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -36,6 +37,7 @@ export function ProfileContent() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const supabase = createClient()
+    const { handleSignOut, loading: isSigningOut } = useAuthActions()
 
 
     useEffect(() => {
@@ -78,11 +80,7 @@ export function ProfileContent() {
     }, [router, supabase])
 
 
-    const handleSignOut = async () => {
-        await supabase.auth.signOut()
-        router.push('/')
-        router.refresh()
-    }
+    // Unified logout handled by useAuthActions
 
     if (loading) {
         return (
@@ -287,10 +285,11 @@ export function ProfileContent() {
                         {/* Logout Button */}
                         <button
                             onClick={handleSignOut}
-                            className="flex items-center justify-center gap-2 w-full p-4 text-destructive bg-card border border-border hover:bg-destructive/10 hover:border-destructive/30 rounded-2xl transition-all font-medium shadow-sm"
+                            disabled={isSigningOut}
+                            className="flex items-center justify-center gap-2 w-full p-4 text-destructive bg-card border border-border hover:bg-destructive/10 hover:border-destructive/30 rounded-2xl transition-all font-medium shadow-sm disabled:opacity-50"
                         >
-                            <LogOut size={20} />
-                            تسجيل الخروج
+                            {isSigningOut ? <Loader2 size={20} className="animate-spin" /> : <LogOut size={20} />}
+                            {isSigningOut ? 'جاري الخروج...' : 'تسجيل الخروج'}
                         </button>
                     </div>
                 </div>
@@ -345,10 +344,11 @@ export function ProfileContent() {
                         {/* Logout Button */}
                         <button
                             onClick={handleSignOut}
-                            className="flex items-center justify-center gap-2 w-full p-4 text-destructive bg-card border border-border hover:bg-destructive/10 hover:border-destructive/30 rounded-2xl transition-all font-medium shadow-sm"
+                            disabled={isSigningOut}
+                            className="flex items-center justify-center gap-2 w-full p-4 text-destructive bg-card border border-border hover:bg-destructive/10 hover:border-destructive/30 rounded-2xl transition-all font-medium shadow-sm disabled:opacity-50"
                         >
-                            <LogOut size={20} />
-                            تسجيل الخروج
+                            {isSigningOut ? <Loader2 size={20} className="animate-spin" /> : <LogOut size={20} />}
+                            {isSigningOut ? 'جاري الخروج...' : 'تسجيل الخروج'}
                         </button>
                     </div>
 

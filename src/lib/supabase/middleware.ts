@@ -36,10 +36,12 @@ export async function updateSession(request: NextRequest) {
     // --- Security Logic ---
     const path = request.nextUrl.pathname
 
-    // 1. If trying to access /admin*, must be logged in
-    if (path.startsWith('/admin')) {
+    // 1. If trying to access /admin* or /content-admin*, must be logged in
+    if (path.startsWith('/admin') || path.startsWith('/content-admin')) {
         if (!user) {
-            return NextResponse.redirect(new URL('/login', request.url))
+            const loginUrl = new URL('/login', request.url)
+            loginUrl.searchParams.set('next', path)
+            return NextResponse.redirect(loginUrl)
         }
 
         // Note: We technically "could" check the role here by querying DB,
@@ -50,8 +52,8 @@ export async function updateSession(request: NextRequest) {
         // For now, Layout check is sufficient for MVP Security.
     }
 
-    // 2. If logged in and trying to access /login, redirect to /
-    if (path.startsWith('/login') && user) {
+    // 2. If logged in and trying to access /login or /signup, redirect to /
+    if ((path.startsWith('/login') || path.startsWith('/signup')) && user) {
         return NextResponse.redirect(new URL('/', request.url))
     }
 

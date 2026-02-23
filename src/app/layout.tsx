@@ -8,6 +8,9 @@ import { SpeedInsights } from "@vercel/speed-insights/next"
 import { Analytics } from "@vercel/analytics/next"
 import { Toaster } from "@/presentation/ui/sonner"
 import { AreaProvider } from "@/contexts/area-context";
+import { AuthListener } from "@/presentation/components/shared/auth/auth-listener";
+import { GoogleOneTap } from "@/presentation/components/shared/auth/google-one-tap";
+import Script from "next/script";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const notoKufi = Noto_Kufi_Arabic({
@@ -73,6 +76,9 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             <VisitTracker />
+            <AuthListener />
+            <GoogleOneTap />
+            <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" />
             {children}
             <SpeedInsights />
             <Analytics />

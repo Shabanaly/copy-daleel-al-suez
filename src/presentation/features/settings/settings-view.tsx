@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { User as SupabaseUser } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
+import { useAuthActions } from '@/presentation/hooks/use-auth-actions'
 import { Breadcrumbs } from '@/presentation/components/ui/Breadcrumbs'
 
 // Import Modular Components
@@ -33,6 +34,7 @@ export function SettingsView({ user, profile }: SettingsViewProps) {
     const { theme, setTheme } = useTheme()
     const router = useRouter()
     const supabase = createClient()
+    const { handleSignOut, loading: isSigningOut } = useAuthActions()
 
     const [activeCategory, setActiveCategory] = useState<SettingCategory>('profile')
     const [isMobileDrillDown, setIsMobileDrillDown] = useState(false)
@@ -51,11 +53,7 @@ export function SettingsView({ user, profile }: SettingsViewProps) {
         window.scrollTo({ top: 0, behavior: 'smooth' })
     }
 
-    const handleSignOut = async () => {
-        await supabase.auth.signOut()
-        router.push('/')
-        router.refresh()
-    }
+    // Unified logout handled by useAuthActions
 
     const activeCategoryLabel = categories.find(c => c.id === activeCategory)?.label
 
@@ -164,12 +162,13 @@ export function SettingsView({ user, profile }: SettingsViewProps) {
                         <div className="pt-4">
                             <button
                                 onClick={handleSignOut}
-                                className="w-full flex items-center gap-4 p-4 rounded-2xl text-red-500 bg-red-500/5 hover:bg-red-500/10 border border-red-500/10 transition-all font-bold group"
+                                disabled={isSigningOut}
+                                className="w-full flex items-center gap-4 p-4 rounded-2xl text-red-500 bg-red-500/5 hover:bg-red-500/10 border border-red-500/10 transition-all font-bold group disabled:opacity-50"
                             >
                                 <div className="w-10 h-10 rounded-xl bg-red-500 text-white flex items-center justify-center shadow-lg shadow-red-500/20 group-hover:scale-110 transition-transform text-right">
-                                    <LogOut size={20} />
+                                    {isSigningOut ? <Loader2 size={20} className="animate-spin" /> : <LogOut size={20} />}
                                 </div>
-                                <span className="flex-1">تسجيل الخروج</span>
+                                <span className="flex-1">{isSigningOut ? 'جاري الخروج...' : 'تسجيل الخروج'}</span>
                                 <ArrowRight size={18} className="opacity-40 group-hover:translate-x-[-4px] transition-transform" />
                             </button>
                         </div>

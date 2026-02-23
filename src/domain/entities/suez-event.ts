@@ -19,6 +19,7 @@ export interface SuezEvent {
     status: EventStatus;
 
     viewCount?: number;
+    displayOrder?: number;
 
     createdAt: string;
     updatedAt: string;

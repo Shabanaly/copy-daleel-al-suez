@@ -71,7 +71,8 @@ export class SupabaseArticleRepository implements ArticleRepository {
 
         const { data, error } = await supabaseClient
             .from("articles")
-            .select("id, title, excerpt, cover_image_url, category, created_at")
+            .select("id, title, excerpt, cover_image_url, category, created_at, display_order")
+            .order("display_order", { ascending: true })
             .order("created_at", { ascending: false })
             .range(offset, offset + limit - 1);
 
@@ -85,8 +86,9 @@ export class SupabaseArticleRepository implements ArticleRepository {
 
         const { data, error } = await supabaseClient
             .from("articles")
-            .select("id, title, excerpt, cover_image_url, category, created_at")
+            .select("id, title, excerpt, cover_image_url, category, created_at, display_order")
             .eq("is_published", true)
+            .order("display_order", { ascending: true })
             .order("created_at", { ascending: false })
             .range(offset, offset + limit - 1);
 
@@ -108,6 +110,7 @@ export class SupabaseArticleRepository implements ArticleRepository {
             author_id: row.author_id,
             category: row.category,
             is_published: row.is_published,
+            display_order: row.display_order || 0,
             created_at: new Date(row.created_at),
             updated_at: new Date(row.updated_at),
         };

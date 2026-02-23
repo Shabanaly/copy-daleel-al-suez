@@ -1,6 +1,6 @@
 "use server"
 
-import { getAuthenticatedUser } from "@/lib/supabase/auth-utils"
+import { requireAdmin } from "@/lib/supabase/auth-utils"
 import { revalidatePath } from "next/cache"
 
 /**
@@ -8,19 +8,7 @@ import { revalidatePath } from "next/cache"
  */
 export async function verifySellerAction(userId: string, type: 'phone' | 'email', status: boolean = true) {
     try {
-        const { user, supabase, error: authError } = await getAuthenticatedUser()
-        if (!user || authError) return { success: false, error: 'غير مصرح' }
-
-        // التحقق من أن المستخدم مشرف
-        const { data: adminProfile } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', user.id)
-            .single()
-
-        if (!adminProfile || !['admin', 'super_admin'].includes(adminProfile.role)) {
-            return { success: false, error: 'هذه الصلاحية للمشرفين فقط' }
-        }
+        const { supabase } = await requireAdmin()
 
         const updateData: any = {}
         if (type === 'phone') updateData.is_verified_phone = status

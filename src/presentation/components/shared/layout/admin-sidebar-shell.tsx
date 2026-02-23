@@ -29,6 +29,8 @@ import {
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { useAuthActions } from '@/presentation/hooks/use-auth-actions'
+import { Loader2 } from 'lucide-react'
 
 // ─── Type Definitions ────────────────────────────────────────────────────────
 
@@ -36,6 +38,7 @@ interface NavItem {
     name: string
     href: string
     icon: React.ElementType
+    count?: number
 }
 
 interface NavGroup {
@@ -67,7 +70,6 @@ const SUPER_ADMIN_GROUPS: NavGroup[] = [
         icon: LayoutDashboard,
         items: [
             { name: 'ملخص النظام', href: '/admin', icon: LayoutDashboard },
-            { name: 'إدارة المحتوى', href: '/content-admin', icon: ShieldCheck },
         ],
     },
     {
@@ -89,19 +91,52 @@ export interface AdminNavProps {
     variant: 'content-admin' | 'super-admin'
     subtitle: string
     isSuperAdmin?: boolean
+    pendingCounts?: { reports: number, claims: number, places: number, marketplace: number }
 }
 
-function getConfig(variant: AdminNavProps['variant'], isSuperAdmin?: boolean) {
+function getConfig(variant: AdminNavProps['variant'], isSuperAdmin?: boolean, counts?: AdminNavProps['pendingCounts']) {
     if (variant === 'content-admin') {
         return {
-            groups: CONTENT_ADMIN_GROUPS,
+            groups: [
+                {
+                    name: 'إدارة المحتوى',
+                    icon: LayoutDashboard,
+                    items: [
+                        { name: 'نظرة عامة', href: '/content-admin', icon: LayoutDashboard },
+                        { name: 'إدارة الأماكن', href: '/content-admin/places', icon: MapPin, count: counts?.places },
+                        { name: 'إدارة السوق', href: '/content-admin/marketplace', icon: ShoppingBag, count: counts?.marketplace },
+                        { name: 'إشراف المجتمع', href: '/content-admin/community', icon: MessageSquare },
+                        { name: 'الأخبار والفعاليات', href: '/content-admin/news', icon: Newspaper },
+                        { name: 'طلبات التوثيق', href: '/content-admin/claims', icon: Key, count: counts?.claims },
+                    ],
+                }
+            ],
             title: 'إدارة المحتوى',
             homeLink: '/',
             backLink: isSuperAdmin ? { label: 'لوحة Super Admin', href: '/admin' } : undefined,
         }
     }
     return {
-        groups: SUPER_ADMIN_GROUPS,
+        groups: [
+            {
+                name: 'الرئيسية',
+                icon: Home,
+                items: [
+                    { name: 'ملخص النظام', href: '/admin', icon: LayoutDashboard },
+                ],
+            },
+            {
+                name: 'النظام والأمان',
+                icon: ShieldCheck,
+                items: [
+                    { name: 'المستخدمين', href: '/admin/users', icon: Users },
+                    { name: 'إدارة التصنيفات', href: '/admin/categories', icon: Layers },
+                    { name: 'البلاغات', href: '/admin/reports', icon: Flag, count: counts?.reports },
+                    { name: 'نبض السويس', href: '/admin/city-pulse', icon: Activity },
+                    { name: 'إعدادات الموقع', href: '/admin/settings', icon: Settings },
+                ],
+            },
+        ],
         title: 'لوحة التحكم',
         homeLink: '/',
         backLink: { label: 'إدارة المحتوى', href: '/content-admin' },
@@ -184,6 +219,11 @@ function NavItems({
                                             >
                                                 <Icon size={17} className={cn('flex-shrink-0', active ? 'text-white' : 'group-hover:text-primary')} />
                                                 {!collapsed && <span className="truncate">{item.name}</span>}
+                                                {item.count ? item.count > 0 && !collapsed && (
+                                                    <span className="ml-auto bg-rose-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                                                        {item.count > 99 ? '+99' : item.count}
+                                                    </span>
+                                                ) : null}
                                                 {active && !collapsed && <div className="absolute left-2 w-1 h-5 bg-white rounded-full" />}
                                             </Link>
                                         )
@@ -213,11 +253,7 @@ function NavFooter({
 }) {
     const router = useRouter()
     const supabase = createClient()
-
-    const handleSignOut = async () => {
-        await supabase.auth.signOut()
-        router.push('/')
-    }
+    const { handleSignOut, loading: isSigningOut } = useAuthActions()
 
     return (
         <div className={cn('border-t border-border p-3 space-y-1 flex-shrink-0', collapsed && 'flex flex-col items-center gap-1')}>
@@ -243,11 +279,12 @@ function NavFooter({
             </Link>
             <button
                 onClick={handleSignOut}
+                disabled={isSigningOut}
                 title={collapsed ? 'خروج' : undefined}
-                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors"
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors disabled:opacity-50"
             >
-                <LogOut size={15} className="flex-shrink-0" />
-                {!collapsed && <span>خروج</span>}
+                {isSigningOut ? <Loader2 size={15} className="animate-spin" /> : <LogOut size={15} className="flex-shrink-0" />}
+                {!collapsed && <span>{isSigningOut ? 'جاري الخروج...' : 'خروج'}</span>}
             </button>
         </div>
     )
@@ -255,8 +292,8 @@ function NavFooter({
 
 // ─── Desktop Sidebar ─────────────────────────────────────────────────────────
 
-export function AdminDesktopSidebar({ variant, subtitle, isSuperAdmin }: AdminNavProps) {
-    const { groups, title, homeLink, backLink } = getConfig(variant, isSuperAdmin)
+export function AdminDesktopSidebar({ variant, subtitle, isSuperAdmin, pendingCounts }: AdminNavProps) {
+    const { groups, title, homeLink, backLink } = getConfig(variant, isSuperAdmin, pendingCounts)
     const [collapsed, setCollapsed] = useState(false)
 
     return (
@@ -310,8 +347,8 @@ export function AdminDesktopSidebar({ variant, subtitle, isSuperAdmin }: AdminNa
 
 // ─── Mobile Drawer Trigger ────────────────────────────────────────────────────
 
-export function AdminMobileDrawerTrigger({ variant, subtitle, isSuperAdmin }: AdminNavProps) {
-    const { groups, title, homeLink, backLink } = getConfig(variant, isSuperAdmin)
+export function AdminMobileDrawerTrigger({ variant, subtitle, isSuperAdmin, pendingCounts }: AdminNavProps) {
+    const { groups, title, homeLink, backLink } = getConfig(variant, isSuperAdmin, pendingCounts)
     const [isOpen, setIsOpen] = useState(false)
     const [mounted, setMounted] = useState(false)
 

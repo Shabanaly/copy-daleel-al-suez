@@ -1,30 +1,13 @@
 'use server'
 
 import { createClient } from "@/lib/supabase/server"
+import { requireSuperAdmin } from "@/lib/supabase/auth-utils"
 import { revalidatePath } from "next/cache"
 
-async function requireSuperAdmin() {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) throw new Error('Unauthorized')
-
-    const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single()
-
-    if (profile?.role !== 'super_admin' && profile?.role !== 'admin') {
-        throw new Error('Forbidden')
-    }
-    return user
-}
 
 export async function createCategoryAction(data: { name: string; slug: string; icon?: string; color?: string; sortOrder?: number }) {
     try {
-        await requireSuperAdmin()
-        const supabase = await createClient()
+        const { supabase } = await requireSuperAdmin()
 
         const { data: category, error } = await supabase
             .from('categories')
@@ -54,8 +37,7 @@ export async function createCategoryAction(data: { name: string; slug: string; i
 
 export async function updateCategoryAction(id: string, data: { name?: string; slug?: string; icon?: string; color?: string; sortOrder?: number; isActive?: boolean }) {
     try {
-        await requireSuperAdmin()
-        const supabase = await createClient()
+        const { supabase } = await requireSuperAdmin()
 
         const { data: category, error } = await supabase
             .from('categories')
@@ -86,8 +68,7 @@ export async function updateCategoryAction(id: string, data: { name?: string; sl
 
 export async function deleteCategoryAction(id: string) {
     try {
-        await requireSuperAdmin()
-        const supabase = await createClient()
+        const { supabase } = await requireSuperAdmin()
 
         // Check if there are places in this category
         const { count, error: countError } = await supabase

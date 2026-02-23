@@ -17,6 +17,7 @@ interface SupabaseEventRow {
     created_at: string;
     updated_at: string;
     view_count: number | null;
+    display_order: number | null;
     places?: { name: string } | null;
 }
 
@@ -32,7 +33,7 @@ export class SupabaseEventRepository implements IEventRepository {
         if (!supabaseClient) return [];
 
         let query = supabaseClient.from('events').select(`
-            id, title, slug, description, image_url, start_date, end_date, location, place_id, type, status, view_count, created_at, updated_at,
+            id, title, slug, description, image_url, start_date, end_date, location, place_id, type, status, view_count, created_at, updated_at, display_order,
             places (name)
         `);
 
@@ -53,7 +54,9 @@ export class SupabaseEventRepository implements IEventRepository {
             query = query.limit(options.limit);
         }
 
-        const { data, error } = await query.order('start_date', { ascending: true });
+        const { data, error } = await query
+            .order('display_order', { ascending: true })
+            .order('start_date', { ascending: true });
 
         if (error) throw error;
 
@@ -132,10 +135,11 @@ export class SupabaseEventRepository implements IEventRepository {
             placeId: data.place_id || undefined,
             placeName: data.places?.name,
             type: data.type as EventType,
-            status: data.status,
+            status: data.status as EventStatus,
             createdAt: new Date(data.created_at).toISOString(),
             updatedAt: new Date(data.updated_at).toISOString(),
             viewCount: data.view_count || 0,
+            displayOrder: data.display_order || 0,
         };
     }
 
@@ -151,6 +155,7 @@ export class SupabaseEventRepository implements IEventRepository {
         if (event.placeId !== undefined) db.place_id = event.placeId;
         if (event.type !== undefined) db.type = event.type;
         if (event.status !== undefined) db.status = event.status;
+        if (event.displayOrder !== undefined) db.display_order = event.displayOrder;
         return db;
     }
 }

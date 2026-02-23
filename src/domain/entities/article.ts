@@ -7,6 +7,7 @@ export interface Article {
     author_id: string;
     category: string; // 'News', 'Story', 'Article', etc.
     is_published: boolean;
+    display_order: number;
     created_at: Date;
     updated_at: Date;
 }

@@ -41,7 +41,7 @@ DROP TRIGGER IF EXISTS trg_sync_report_fks ON reports;
 CREATE TRIGGER trg_sync_report_fks
 BEFORE INSERT OR UPDATE ON reports
 FOR EACH ROW
-EXECUTE FUNCTION sync_report_foreign_keys();
+EXECUTE PROCEDURE sync_report_foreign_keys();
 
 -- 4. Create Indexes for the new foreign keys
 CREATE INDEX IF NOT EXISTS idx_reports_item_id ON reports(item_id);

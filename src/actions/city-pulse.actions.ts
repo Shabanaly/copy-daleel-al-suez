@@ -4,6 +4,7 @@ import { createClient, createReadOnlyClient } from "@/lib/supabase/server";
 import { CityPulseItem } from "@/domain/entities/city-pulse-item";
 import { revalidatePath, unstable_cache } from "next/cache";
 import { cache as reactCache } from "react";
+import { requireAdmin } from "@/lib/supabase/auth-utils";
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -66,7 +67,7 @@ export const getCachedActiveCityPulseItems = unstable_cache(
 // ─── Admin: full CRUD ─────────────────────────────────────────────────────────
 
 export async function getAllCityPulseItems(): Promise<CityPulseItem[]> {
-    const supabase = await createClient();
+    const { supabase } = await requireAdmin();
 
     const { data, error } = await supabase
         .from('city_pulse_items')
@@ -90,7 +91,7 @@ export type CreateCityPulseInput = {
 };
 
 export async function createCityPulseItemAction(input: CreateCityPulseInput): Promise<void> {
-    const supabase = await createClient();
+    const { supabase } = await requireAdmin();
 
     const { error } = await supabase.from('city_pulse_items').insert({
         text: input.text.trim(),
@@ -111,7 +112,7 @@ export async function createCityPulseItemAction(input: CreateCityPulseInput): Pr
 export type UpdateCityPulseInput = Partial<CreateCityPulseInput>;
 
 export async function updateCityPulseItemAction(id: string, input: UpdateCityPulseInput): Promise<void> {
-    const supabase = await createClient();
+    const { supabase } = await requireAdmin();
 
     const patch: Record<string, unknown> = {};
     if (input.text !== undefined) patch.text = input.text.trim();
@@ -132,7 +133,7 @@ export async function updateCityPulseItemAction(id: string, input: UpdateCityPul
 }
 
 export async function deleteCityPulseItemAction(id: string): Promise<void> {
-    const supabase = await createClient();
+    const { supabase } = await requireAdmin();
 
     const { error } = await supabase
         .from('city_pulse_items')

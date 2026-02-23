@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { X, Home, Calendar, Plus, MapPin, Clock, Star, User, Settings, LogOut, Menu, ShoppingBag, Store, LayoutGrid, Newspaper, AlertTriangle, Shield, MessageSquare, Key, PlusCircle, Info, PhoneCall } from 'lucide-react'
+import { useAuthActions } from '@/presentation/hooks/use-auth-actions'
+import { X, Home, Calendar, Plus, MapPin, Clock, Star, User, Settings, LogOut, Menu, ShoppingBag, Store, LayoutGrid, Newspaper, AlertTriangle, Shield, MessageSquare, Key, PlusCircle, Info, PhoneCall, Loader2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 
@@ -52,6 +53,7 @@ export function MobileDrawer({ user }: MobileDrawerProps) {
     const pathname = usePathname()
     const router = useRouter()
     const supabase = createClient()
+    const { handleSignOut: signOut, loading: isSigningOut } = useAuthActions()
 
     useEffect(() => {
         setMounted(true)
@@ -71,8 +73,7 @@ export function MobileDrawer({ user }: MobileDrawerProps) {
     }, [user])
 
     const handleSignOut = async () => {
-        await supabase.auth.signOut()
-        router.push('/')
+        await signOut()
         setIsOpen(false)
     }
 
@@ -90,7 +91,7 @@ export function MobileDrawer({ user }: MobileDrawerProps) {
             {/* Drawer Portal */}
             {mounted && isOpen && createPortal(
                 <AnimatePresence mode="wait">
-                    <div className="fixed inset-0 z-[100] lg:hidden">
+                    <div className="fixed inset-0 z-[250] lg:hidden">
                         {/* Backdrop */}
                         <motion.div
                             initial={{ opacity: 0 }}
@@ -274,10 +275,11 @@ export function MobileDrawer({ user }: MobileDrawerProps) {
                                     {user && (
                                         <button
                                             onClick={handleSignOut}
-                                            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/10 dark:text-red-400 dark:hover:bg-red-900/20 transition-colors font-medium text-sm"
+                                            disabled={isSigningOut}
+                                            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/10 dark:text-red-400 dark:hover:bg-red-900/20 transition-colors font-medium text-sm disabled:opacity-50"
                                         >
-                                            <LogOut size={16} />
-                                            <span>خروج</span>
+                                            {isSigningOut ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogOut size={16} />}
+                                            <span>{isSigningOut ? 'جاري الخروج...' : 'خروج'}</span>
                                         </button>
                                     )}
                                 </div>

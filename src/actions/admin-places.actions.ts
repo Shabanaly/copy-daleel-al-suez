@@ -99,7 +99,7 @@ export async function updatePlaceStatusAction(id: string, status: 'active' | 'pe
 
 export async function deletePlaceAction(id: string) {
     try {
-        await requireAdmin()
+        const { user } = await requireAdmin()
         const supabase = await createClient()
 
         const { error } = await supabase
@@ -108,6 +108,16 @@ export async function deletePlaceAction(id: string) {
             .eq('id', id)
 
         if (error) throw error
+
+        // سجل العمليات
+        try {
+            await supabase.from('audit_logs').insert({
+                user_id: user.id,
+                action: 'place.delete',
+                table_name: 'places',
+                record_id: id
+            })
+        } catch (e) { }
 
         revalidatePath('/content-admin/places')
         revalidatePath('/places')
@@ -170,5 +180,36 @@ export async function bulkUpdatePlacesStatusAction(ids: string[], status: 'activ
     } catch (error) {
         console.error('Error bulk updating places:', error)
         return { success: false, message: 'فشل في تحديث الأماكن' }
+    }
+}
+
+export async function bulkDeletePlacesAction(ids: string[]) {
+    try {
+        const { user } = await requireAdmin()
+        const supabase = await createClient()
+
+        const { error } = await supabase
+            .from('places')
+            .delete()
+            .in('id', ids)
+
+        if (error) throw error
+
+        // سجل العمليات
+        try {
+            await supabase.from('audit_logs').insert({
+                user_id: user.id,
+                action: 'places.bulk_delete',
+                table_name: 'places',
+                new_data: { count: ids.length, ids }
+            })
+        } catch (e) { }
+
+        revalidatePath('/content-admin/places')
+        revalidatePath('/places')
+        return { success: true, message: `تم حذف ${ids.length} مكان بنجاح` }
+    } catch (error) {
+        console.error('Error bulk deleting places:', error)
+        return { success: false, message: 'فشل في حذف الأماكن المختارة' }
     }
 }

@@ -42,10 +42,10 @@ export default function SupabaseImageUpload({
 
     const compressImage = async (file: File) => {
         const options = {
-            maxSizeMB: 1,
-            maxWidthOrHeight: 1200,
+            maxSizeMB: 0.4,
+            maxWidthOrHeight: 1024,
             useWebWorker: true,
-            initialQuality: 0.8
+            initialQuality: 0.7
         }
         try {
             return await imageCompression(file, options)
@@ -61,11 +61,11 @@ export default function SupabaseImageUpload({
         const previews: string[] = []
 
         for (const file of acceptedFiles) {
-            // Only compress if it's an image and larger than 0.5MB or HEIC
+            // Only compress if it's an image and larger than 100KB or HEIC
             const isHEIC = file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')
             let finalFile = file
 
-            if (file.size > 0.5 * 1024 * 1024 || isHEIC) {
+            if (file.size > 0.1 * 1024 * 1024 || isHEIC) {
                 finalFile = await compressImage(file)
             }
 
