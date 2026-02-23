@@ -132,7 +132,7 @@ export function PlaceCard({
                     <div className="flex justify-between items-start gap-1 mb-1.5">
                         <h3 className={cn(
                             "font-bold text-foreground group-hover:text-primary transition-colors line-clamp-1 flex-1",
-                            isCompact ? "text-sm md:text-base" : "text-lg md:text-xl"
+                            isCompact ? "text-base md:text-lg" : "text-xl md:text-2xl"
                         )}>
                             {place.name}
                         </h3>
@@ -166,7 +166,10 @@ export function PlaceCard({
                         isCompact ? "pt-1.5" : "pt-3"
                     )}>
                         {/* Address */}
-                        <div className={cn("flex items-center gap-1 text-muted-foreground", isCompact ? "text-[9px]" : "text-[11px]")}>
+                        <div className={cn(
+                            "flex items-center gap-1 text-muted-foreground",
+                            isCompact ? "text-xs md:text-sm" : "text-sm md:text-base"
+                        )}>
                             <MapPin className={cn("shrink-0 opacity-70", isCompact ? "w-3 h-3" : "w-3.5 h-3.5")} />
                             <span className="truncate">{place.address}</span>
                         </div>
