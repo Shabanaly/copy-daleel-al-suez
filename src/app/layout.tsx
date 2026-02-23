@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/presentation/components/shared/theme-provider";
 import { VisitTracker } from '@/presentation/components/shared/analytics/VisitTracker'
 import { SpeedInsights } from "@vercel/speed-insights/next"
+import { Analytics } from "@vercel/analytics/next"
 import { Toaster } from "@/presentation/ui/sonner"
 import { AreaProvider } from "@/contexts/area-context";
 
@@ -74,6 +75,7 @@ export default function RootLayout({
             <VisitTracker />
             {children}
             <SpeedInsights />
+            <Analytics />
             <Toaster position="top-center" />
           </ThemeProvider>
         </AreaProvider>
