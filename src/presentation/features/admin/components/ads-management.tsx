@@ -97,10 +97,12 @@ export function AdsManagement({ initialAds }: AdsManagementProps) {
     const getPlacementDetails = (placement: string) => {
         switch (placement) {
             case 'home_top': return 'الرئيسية (أعلى)';
+            case 'home_middle': return 'الرئيسية (منتصف)';
+            case 'home_bottom': return 'الرئيسية (أسفل)';
             case 'marketplace_feed': return 'إعلانات السوق';
             case 'marketplace_sidebar': return 'الشريط الجانبي للسوق';
             case 'place_details': return 'داخل تفاصيل المكان';
-            default: return placement;
+            default: return placement || 'غير محدد';
         }
     };
 
@@ -218,8 +220,23 @@ export function AdsManagement({ initialAds }: AdsManagementProps) {
                                         <span className="font-black text-foreground">{getPlacementDetails(ad.placement || 'home_top')}</span>
                                     </div>
                                     <div className="flex justify-between text-[11px] font-medium text-muted-foreground">
-                                        <span>النقرات/المستفيدين:</span>
-                                        <span className="font-black text-primary bg-primary/10 px-1.5 rounded">{ad.currentClaims}</span>
+                                        <span>مشاهدات الإعلان (فريدة):</span>
+                                        <span className="font-black text-slate-600 bg-slate-50 px-1.5 rounded">{ad.viewsCount}</span>
+                                    </div>
+                                    <div className="flex justify-between text-[11px] font-medium text-muted-foreground">
+                                        <span>النقرات المسجلة:</span>
+                                        <span className="font-black text-blue-600 bg-blue-50 px-1.5 rounded">
+                                            {ad.clicksCount}
+                                            {ad.viewsCount > 0 && (
+                                                <span className="text-[9px] text-blue-400 mr-1 opacity-70">
+                                                    ({((ad.clicksCount / ad.viewsCount) * 100).toFixed(1)}%)
+                                                </span>
+                                            )}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between text-[11px] font-medium text-muted-foreground">
+                                        <span>سحوبات العرض:</span>
+                                        <span className="font-black text-emerald-600 bg-emerald-50 px-1.5 rounded">{ad.currentClaims}</span>
                                     </div>
                                 </div>
 

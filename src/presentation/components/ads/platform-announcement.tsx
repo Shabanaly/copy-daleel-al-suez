@@ -2,8 +2,9 @@
 
 import { FlashDeal } from "@/domain/entities/flash-deal";
 import { X, Info } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { trackAdClickAction, trackAdViewAction } from "@/actions/admin-ads.actions";
 
 interface Props {
     announcement: FlashDeal;
@@ -11,6 +12,23 @@ interface Props {
 
 export function PlatformAnnouncement({ announcement }: Props) {
     const [isVisible, setIsVisible] = useState(true);
+
+    useEffect(() => {
+        if (!announcement.id) return;
+
+        // Check session storage
+        const viewedAds = JSON.parse(sessionStorage.getItem('viewed_ads') || '[]');
+        if (!viewedAds.includes(announcement.id)) {
+            trackAdViewAction(announcement.id);
+            viewedAds.push(announcement.id);
+            sessionStorage.setItem('viewed_ads', JSON.stringify(viewedAds));
+        }
+    }, [announcement.id]);
+
+    const handleClick = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        await trackAdClickAction(announcement.id);
+    };
 
     if (!isVisible || announcement.type !== 'platform_announcement') return null;
 
@@ -22,8 +40,11 @@ export function PlatformAnnouncement({ announcement }: Props) {
             <div className="container mx-auto flex items-center justify-between text-sm sm:text-base font-medium">
                 <div className="w-6 h-6 flex-shrink-0" /> {/* Spacer for centering */}
 
-                <div className="flex items-center gap-2 text-center max-w-2xl px-2">
-                    <Info size={18} className="flex-shrink-0" />
+                <div
+                    onClick={handleClick}
+                    className="flex items-center gap-2 text-center max-w-2xl px-2 cursor-pointer group/content"
+                >
+                    <Info size={18} className="flex-shrink-0 group-hover/content:scale-110 transition-transform" />
                     <p>
                         <strong className="ml-1">{announcement.title}:</strong>
                         {announcement.description}

@@ -340,6 +340,17 @@ export function AddAdModal({ isOpen, onClose, adToEdit }: AddAdModalProps) {
                                     <label className="text-sm font-bold text-indigo-600">سعر العرض (مطلوب)</label>
                                     <input type="number" min={0} required value={formData.dealPrice || ''} onChange={(e) => setFormData({ ...formData, dealPrice: parseFloat(e.target.value) || undefined })} className="w-full bg-muted/30 border border-indigo-300 rounded-xl px-4 py-2.5 outline-none font-black" />
                                 </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-sm font-bold text-slate-600">الحد الأقصى للسحوبات (اختياري)</label>
+                                    <input
+                                        type="number"
+                                        min={1}
+                                        value={formData.maxClaims || ''}
+                                        onChange={(e) => setFormData({ ...formData, maxClaims: parseInt(e.target.value) || undefined })}
+                                        className="w-full bg-muted/30 border border-slate-300 rounded-xl px-4 py-2.5 outline-none"
+                                        placeholder="مثال: 50"
+                                    />
+                                </div>
                             </>
                         )}
 

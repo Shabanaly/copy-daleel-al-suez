@@ -19,6 +19,8 @@ export interface FlashDeal {
     targetUrl?: string;
     adCode?: string;
     backgroundColor?: string;
+    clicksCount: number;
+    viewsCount: number;
     createdAt: string;
 }
 

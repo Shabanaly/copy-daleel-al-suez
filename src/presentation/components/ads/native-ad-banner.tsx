@@ -3,6 +3,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Tag, ArrowLeft, Percent } from "lucide-react";
+import { trackAdClickAction, trackAdViewAction, claimAdOfferAction } from "@/actions/admin-ads.actions";
+import { useEffect, useRef, useState } from "react";
+import { ClaimSuccessModal } from "./claim-success-modal";
 
 interface Props {
     ad: FlashDeal;
@@ -10,8 +13,57 @@ interface Props {
 }
 
 export function NativeAdBanner({ ad, className }: Props) {
+    const bannerRef = useRef<HTMLDivElement>(null);
+    const [isClaimModalOpen, setIsClaimModalOpen] = useState(false);
+    const [isClaiming, setIsClaiming] = useState(false);
+
+    useEffect(() => {
+        if (!ad.id) return;
+
+        const observer = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting) {
+                // Check session storage to see if we've already tracked this ad in this session
+                const viewedAds = JSON.parse(sessionStorage.getItem('viewed_ads') || '[]');
+                if (!viewedAds.includes(ad.id)) {
+                    trackAdViewAction(ad.id);
+                    viewedAds.push(ad.id);
+                    sessionStorage.setItem('viewed_ads', JSON.stringify(viewedAds));
+                }
+                // Once tracked (or checked), we can stop observing this instance
+                observer.disconnect();
+            }
+        }, { threshold: 0.1 }); // Trigger when 10% of the ad is visible
+
+        if (bannerRef.current) {
+            observer.observe(bannerRef.current);
+        }
+
+        return () => observer.disconnect();
+    }, [ad.id]);
+
     if (!ad.imageUrl && !ad.backgroundColor) return null;
     if (ad.type !== 'native_ad' && ad.type !== 'item_deal' && ad.type !== 'place_deal') return null;
+
+    const handleClaim = async (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (isClaiming) return;
+
+        setIsClaiming(true);
+        const res = await claimAdOfferAction(ad.id);
+        if (res.success) {
+            setIsClaimModalOpen(true);
+        } else {
+            console.error('Claim Error:', res.message);
+        }
+        setIsClaiming(false);
+    };
+
+    const handleClick = async (e: React.MouseEvent) => {
+        // If it's a deal, we might want to track click separately, 
+        // but often the Claim is the primary action.
+        await trackAdClickAction(ad.id);
+    };
 
     // Calculate discount if possible
     const hasDiscount = ad.originalPrice && ad.dealPrice && ad.originalPrice > ad.dealPrice;
@@ -19,10 +71,17 @@ export function NativeAdBanner({ ad, className }: Props) {
         ? Math.round(((ad.originalPrice! - ad.dealPrice!) / ad.originalPrice!) * 100)
         : ad.discountPercentage;
 
-    const Content = () => (
+    // Scarcity Info
+    const isDeal = ad.type === 'item_deal' || ad.type === 'place_deal';
+    const remainingClaims = ad.maxClaims ? ad.maxClaims - ad.currentClaims : null;
+    const isOutOfStock = remainingClaims !== null && remainingClaims <= 0;
+
+    const renderContent = () => (
         <div
+            ref={bannerRef}
             className={cn(
                 "relative w-full h-full overflow-hidden rounded-2xl group transition-all duration-500 hover:shadow-2xl hover:shadow-primary/20 border border-border/50",
+                isOutOfStock && "grayscale opacity-80",
                 className
             )}
             style={ad.backgroundColor ? { backgroundColor: ad.backgroundColor } : {}}
@@ -49,11 +108,21 @@ export function NativeAdBanner({ ad, className }: Props) {
                     {/* Badge & Info */}
                     <div className="flex items-center gap-2 mb-1">
                         <div className="bg-primary text-primary-foreground text-[10px] md:text-xs px-2 py-0.5 rounded-full font-black uppercase tracking-widest shadow-lg">
-                            {ad.type === 'item_deal' || ad.type === 'place_deal' ? 'عرض حصري' : 'إعلان مميز'}
+                            {isDeal ? 'عرض حصري' : 'إعلان مميز'}
                         </div>
                         {ad.placeName && (
                             <span className="text-[10px] md:text-xs font-medium text-white/80 bg-white/10 backdrop-blur-md px-2 py-0.5 rounded-full border border-white/10">
                                 {ad.placeName}
+                            </span>
+                        )}
+                        {remainingClaims !== null && remainingClaims > 0 && remainingClaims <= 10 && (
+                            <span className="text-[10px] md:text-xs font-black text-rose-400 bg-rose-500/20 backdrop-blur-md px-2 py-0.5 rounded-full border border-rose-500/30 animate-pulse">
+                                متبقي {remainingClaims} فقط!
+                            </span>
+                        )}
+                        {isOutOfStock && (
+                            <span className="text-[10px] md:text-xs font-black text-white bg-slate-600 px-2 py-0.5 rounded-full">
+                                نفاذ الكمية
                             </span>
                         )}
                     </div>
@@ -89,11 +158,22 @@ export function NativeAdBanner({ ad, className }: Props) {
                     )}
                 </div>
 
-                {/* Call to Action Icon/Button (visible on hover or mobile) */}
-                <div className="absolute bottom-6 left-6 md:left-8 opacity-0 group-hover:opacity-100 md:translate-x-4 group-hover:translate-x-0 transition-all duration-500">
-                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-white text-primary flex items-center justify-center shadow-2xl hover:bg-primary hover:text-white transition-colors">
-                        <ArrowLeft size={20} className="rtl:rotate-180" />
-                    </div>
+                {/* Call to Action Button */}
+                <div className="absolute bottom-6 left-6 md:left-8 group-hover:translate-x-0 transition-all duration-500">
+                    {isDeal && !isOutOfStock ? (
+                        <button
+                            onClick={handleClaim}
+                            disabled={isClaiming}
+                            className="bg-primary text-primary-foreground px-4 md:px-6 py-2 rounded-xl font-black text-xs md:text-sm flex items-center gap-2 hover:scale-105 transition-transform shadow-xl shadow-primary/20"
+                        >
+                            {isClaiming ? 'جاري...' : 'احصل على العرض'}
+                            <ArrowLeft size={16} className="rtl:rotate-180" />
+                        </button>
+                    ) : (
+                        <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-white text-primary flex items-center justify-center shadow-2xl hover:bg-primary hover:text-white transition-colors opacity-0 group-hover:opacity-100 md:translate-x-4 group-hover:translate-x-0">
+                            <ArrowLeft size={20} className="rtl:rotate-180" />
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -115,6 +195,13 @@ export function NativeAdBanner({ ad, className }: Props) {
             <div className="absolute top-4 right-4 bg-black/40 backdrop-blur-xl border border-white/10 text-white/80 text-[8px] md:text-[10px] px-2 py-0.5 rounded-full uppercase font-black tracking-widest z-20">
                 إعلان
             </div>
+
+            <ClaimSuccessModal
+                isOpen={isClaimModalOpen}
+                onClose={() => setIsClaimModalOpen(false)}
+                title={ad.title}
+                placeName={ad.placeName}
+            />
         </div>
     );
 
@@ -123,22 +210,35 @@ export function NativeAdBanner({ ad, className }: Props) {
     if (ad.targetUrl) {
         if (ad.targetUrl.startsWith('http')) {
             return (
-                <a href={ad.targetUrl} target="_blank" rel="noopener noreferrer" className={cn("block relative w-full", containerHeight)}>
-                    <Content />
+                <a
+                    href={ad.targetUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={handleClick}
+                    className={cn("block relative w-full", containerHeight)}
+                >
+                    {renderContent()}
                 </a>
             );
         }
 
         return (
-            <Link href={ad.targetUrl} className={cn("block relative w-full", containerHeight)}>
-                <Content />
+            <Link
+                href={ad.targetUrl}
+                onClick={handleClick}
+                className={cn("block relative w-full", containerHeight)}
+            >
+                {renderContent()}
             </Link>
         );
     }
 
     return (
-        <div className={cn("relative w-full", containerHeight)}>
-            <Content />
+        <div
+            onClick={handleClick}
+            className={cn("relative w-full cursor-pointer", containerHeight)}
+        >
+            {renderContent()}
         </div>
     );
 }

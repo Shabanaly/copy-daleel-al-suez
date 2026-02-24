@@ -167,6 +167,22 @@ export class SupabaseFlashDealRepository implements IFlashDealRepository {
         if (error) throw new Error(error.message);
     }
 
+    async trackClick(adId: string): Promise<void> {
+        if (!this.supabase) throw new Error("Supabase client not initialized");
+
+        const { error } = await this.supabase.rpc('increment_ad_clicks', { ad_id: adId });
+
+        if (error) throw new Error(error.message);
+    }
+
+    async trackView(adId: string): Promise<void> {
+        if (!this.supabase) throw new Error("Supabase client not initialized");
+
+        const { error } = await this.supabase.rpc('increment_ad_views', { ad_id: adId });
+
+        if (error) throw new Error(error.message);
+    }
+
     private mapToEntity(row: any): FlashDeal {
         return {
             id: row.id,
@@ -188,6 +204,8 @@ export class SupabaseFlashDealRepository implements IFlashDealRepository {
             targetUrl: row.target_url,
             adCode: row.ad_code,
             backgroundColor: row.background_color,
+            clicksCount: row.clicks_count || 0,
+            viewsCount: row.views_count || 0,
             createdAt: row.created_at
         };
     }

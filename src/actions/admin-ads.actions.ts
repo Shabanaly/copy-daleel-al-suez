@@ -46,6 +46,9 @@ export async function getAdminAdsAction(): Promise<{ success: boolean; data?: Fl
                 imageUrl: row.image_url,
                 targetUrl: row.target_url,
                 adCode: row.ad_code,
+                backgroundColor: row.background_color,
+                clicksCount: row.clicks_count || 0,
+                viewsCount: row.views_count || 0,
                 createdAt: row.created_at,
                 placeName: row.places?.name
             };
@@ -131,6 +134,44 @@ export async function updateAdminAdAction(id: string, payload: CreateFlashDealDT
         revalidatePath('/', 'layout');
         return { success: true, message: 'تم تحديث الإعلان بنجاح' };
     } catch (error: any) {
+        return { success: false, message: error.message };
+    }
+}
+
+export async function trackAdClickAction(adId: string): Promise<{ success: boolean }> {
+    try {
+        const supabase = await createClient();
+        const repo = new SupabaseFlashDealRepository(supabase);
+        await repo.trackClick(adId);
+        return { success: true };
+    } catch (error) {
+        console.error('trackAdClickAction Error:', error);
+        return { success: false };
+    }
+}
+
+export async function trackAdViewAction(adId: string): Promise<{ success: boolean }> {
+    try {
+        const supabase = await createClient();
+        const repo = new SupabaseFlashDealRepository(supabase);
+        await repo.trackView(adId);
+        return { success: true };
+    } catch (error) {
+        console.error('trackAdViewAction Error:', error);
+        return { success: false };
+    }
+}
+
+export async function claimAdOfferAction(adId: string): Promise<{ success: boolean; message?: string }> {
+    try {
+        const supabase = await createClient();
+        const repo = new SupabaseFlashDealRepository(supabase);
+        await repo.claimDeal(adId);
+
+        revalidatePath('/', 'layout');
+        return { success: true };
+    } catch (error: any) {
+        console.error('claimAdOfferAction Error:', error);
         return { success: false, message: error.message };
     }
 }
